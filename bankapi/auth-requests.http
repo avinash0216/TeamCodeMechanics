@@ -1,0 +1,94 @@
+### Client Credentials token -- service identity, no user involved.
+### The Authorization header is Base64("bank-service:bank-service-secret").
+POST http://localhost:9000/oauth2/token
+Authorization: Basic YmFuay1zZXJ2aWNlOmJhbmstc2VydmljZS1zZWNyZXQ=
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&scope=account.read transaction.read
+
+###
+
+### Authorization Code flow -- Step 1.
+### Open the URL below manually in your browser (do not run it as an HTTP request).
+### Log in as alice / password and approve the scopes on the consent screen.
+### The browser redirects to http://127.0.0.1:9000/authorized?code=XXXX
+### Copy the "code" query parameter value from the URL bar before it expires.
+###
+### IMPORTANT: the authorize URL host (127.0.0.1) MUST match the redirect_uri
+### host (127.0.0.1). Using "localhost" for one and "127.0.0.1" for the other
+### will cost you a second login -- the browser treats them as different origins.
+###
+### URL to open in browser:
+### http://127.0.0.1:9000/oauth2/authorize?response_type=code&client_id=bank-spa&redirect_uri=http://127.0.0.1:9000/authorized&scope=openid%20profile%20account.read%20account.write%20account.create%20transaction.read%20transaction.create%20customer.read%20customer.write&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&state=abc123
+
+###
+
+### Authorization Code flow -- Step 2.
+### Replace CODE_FROM_BROWSER with the value from the browser URL bar.
+### The code_verifier matches the code_challenge in the URL above.
+POST http://127.0.0.1:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code
+    &code=h-MTN2M3rOgEe99tbJu7DILTM0AoCoNf2FcnKS8dVtyIB-zohjJ4nsJxt5b3SEzjBdhHp0p2D2R5Njf8CGDSXYFSsCMcsGAvMct4qWwKKnbdRei6xHrTZn7q0mNnVjHZ&state=abc123
+    &redirect_uri=http://127.0.0.1:9000/authorized
+    &client_id=bank-spa
+    &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+
+
+
+### Step 1: Obtain a service token (run this first).
+POST http://127.0.0.1:9000/oauth2/token
+Authorization: Basic YmFuay1zZXJ2aWNlOmJhbmstc2VydmljZS1zZWNyZXQ=
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&scope=account.read transaction.read
+
+###
+
+### Step 2: Health endpoint -- no token required, should return 200.
+GET http://localhost:8081/health
+
+###
+
+### Step 3: Accounts with no token -- should return 401.
+GET http://localhost:8081/api/v1/accounts
+
+###
+
+### Step 4: Accounts with a valid token -- should return 200.
+### Paste the access_token from Step 1.
+GET http://localhost:8081/api/v1/accounts
+Authorization: Bearer eyJraWQiOiI2MTI0MjE4MC02MDU4LTQwYTctOTIxMS00ODhhMTI1MGIyM2MiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJDMDAxIiwiYXVkIjoiYmFuay1zcGEiLCJuYmYiOjE3ODI0MDYzMDIsInNjb3BlIjoiY3VzdG9tZXIucmVhZCBhY2NvdW50LndyaXRlIHRyYW5zYWN0aW9uLmNyZWF0ZSB0cmFuc2FjdGlvbi5yZWFkIG9wZW5pZCBwcm9maWxlIGFjY291bnQucmVhZCIsInJvbGVzIjpbImFjY291bnRfaG9sZGVyIl0sImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6OTAwMCIsIm5hbWUiOiJBbGljZSBOZ3V5ZW4iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhbGljZSIsImV4cCI6MTc4MjQwNjYwMiwiaWF0IjoxNzgyNDA2MzAyLCJqdGkiOiJhZWMxNWE4MC04NzlhLTRjODEtYWE2Ni0wYjI5MGZlZjMyMzUifQ.ReAQp99d1q4G46Ar4CqiYsnE4G3DT8l7ixX21scDEqiOP6bgENg_jjVj_uu3B33Urj4OdgXcejNDRbP2rZAQV1M1OMc2_IxD_ki8AwZU4Ms6SAk3ldSMxPWOevCotqaisk2IL_1vFtI4pAnYmiJbRLbvbQbvGJLR_b1BMhsfm-nPTFwR2YQVPSi6IzbRd0RQHSoYMeWU8tKqmHvSu-OqaTtFQjDOxTOK9Hk8--Dxk7CL7h_ftxsehLcoBW7j_DdeCsOEo1GQymloHTeIYdTyPDhEPYazgzXwgjcsuWYjqgz_mdmtJPXux36fq0Jil6VIOKYIk8xR0_AX7FAPNhPflA
+
+###
+
+### Step 5: POST with read scopes only -- should return 403.
+### The service token has account.read but NOT account.create.
+POST http://localhost:8080/api/v1/accounts
+Authorization: Bearer eyJraWQiOiI0NDA3ZmYxZi1kODhiLTQ2MWYtOTA4ZC1lMzVkM2Q2YTdhY2YiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJiYW5rLXNlcnZpY2UiLCJhdWQiOiJiYW5rLXNlcnZpY2UiLCJuYmYiOjE3ODExMjM5NjcsInNjb3BlIjpbInRyYW5zYWN0aW9uLnJlYWQiLCJhY2NvdW50LnJlYWQiXSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo5MDAwIiwiZXhwIjoxNzgxMTI3NTY3LCJpYXQiOjE3ODExMjM5NjcsImp0aSI6IjEyZTFlMDgzLWQwMTUtNDhmZi1iODVlLTQ4MWY3YzFjMjk1OCJ9.BOVnwmnLUQGOXvgpdlFOZC1191cQ9Fz798id_62glurpROMQVNKNbLG_0kU6ZM6iwUExZzPOIwjxF9lr7lIe2Sh8gTLL7I_jXqxn2FOb1neyRmP4XXQTxDrUabjwuUwzH32gK73O-9Ej1BqPCLKOz2Mu_YE8-okjWVyAityvxLjR2Z2boGO29IAG7wbH92XnXi6iKVlYgY_eJgIPmp-JbmLBP4bBAJFZpEoO0Z5EZ08s5Ww1rNOJ4RlnEH-XfmZ4wTfYAViuHfCqBhIJpw42T9-FAPLSauGWt2zpqIdLNrRa5r9rg0ckOL3pSD6a7YXEkwr6wfd1cPCWY-X4JJdAvg
+Content-Type: application/json
+
+{
+  "id": "A006",
+  "customerId": "C002",
+  "accountType": "SAVINGS",
+  "balance": 500.00
+}
+
+
+### Current identity -- observe which claims are present for a service token.
+GET http://localhost:8080/api/v1/accounts/me
+Authorization: Bearer eyJraWQiOiI4ZThkY2Y2Mi1jODE2LTRhOTgtYjU5MC1kMTU3MGIyYzQ5N2QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJDMDAzIiwiYXVkIjoiYmFuay1zcGEiLCJuYmYiOjE3ODExMjg1OTEsInNjb3BlIjoiY3VzdG9tZXIucmVhZCBhY2NvdW50LndyaXRlIHRyYW5zYWN0aW9uLmNyZWF0ZSB0cmFuc2FjdGlvbi5yZWFkIG9wZW5pZCBwcm9maWxlIGFjY291bnQucmVhZCIsInJvbGVzIjpbImFjY291bnRfaG9sZGVyIl0sImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6OTAwMCIsIm5hbWUiOiJDYXJsYSBSb21lcm8iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJjYXJsYSIsImV4cCI6MTc4MTEyODg5MSwiaWF0IjoxNzgxMTI4NTkxLCJqdGkiOiJiNmE1ZDNlNS1mODJjLTRiMmUtOWE1ZS1kNDVhZGQyMzRkZjUifQ.A6yRRX1tepO8X32Hphh-xgUcEfjtB-fzjtWFu7qs3Tq9hsRgrYN7FeZvw3WP1kxHeHaCD1WVZl6NZh8sFzx4Gztz_aJxsGhh7BHTnvPbeUs3z4zDQPD_hdKHTWxyYXFHVWWyJ08GaWeg9K1qzJP4Ob3ym2FTzjBCbw0H5Xs8no7WT04q9N3qfFvIS7nnT98AWmZ6nV4-DvCzEsAaigt0o-wBRv6sAIvgb4i03aRIFJox_CvjVWvzPiHnji5v20p-YButDQ9c3CPOgJY9fHctwmFySA6LsfWhvYbhwPnxYFmzP0aXjPUa7Gq1nEv5lg1wkPxIjLGswJWn0cott9uIaQ
+
+### Get account by Id
+GET http://localhost:8080/api/v1/accounts/A001
+Authorization: Bearer eyJraWQiOiJjM2M3MDNiMS1lZjk1LTRlODItOTdhNy1kMGJjMTk0Y2I2YzgiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJiYW5rLXNlcnZpY2UiLCJhdWQiOiJiYW5rLXNlcnZpY2UiLCJuYmYiOjE3ODExMTY0MDksInNjb3BlIjpbInRyYW5zYWN0aW9uLnJlYWQiLCJhY2NvdW50LnJlYWQiXSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo5MDAwIiwiZXhwIjoxNzgxMTIwMDA5LCJpYXQiOjE3ODExMTY0MDksImp0aSI6ImY0ZDk3NTA3LTUxZTAtNDUyZS04MWZmLTIwM2U2NzYyOWE2MCJ9.rQTpOXa_Eb17RnLJHtwJjbVWjEgDEX_6KI-mYC4hX1IXcKwYgjjwoLTzQN0MCsmKFpgLckiuAFijHeE6ec7asjR-Tq77Qynz-RgGKWnXySStgiStfhurkj3hbwj7oPS4qpR64hFNSyTCpNmvqUx---XAWk9Ke4qf3Flh_uU_6EwFNtu-5IUyso8mKSyeZRaDfFiClMtRLmvC6VLJOWantDc3_w9fHEp8phQ4T7O9Y_mALy2ydalhA99LdLnXcIyGI_KQiM82T3LRpnVFCkqhzGCcTdrq6VKIvIAImXn4yIqSTl8DIQAOrK_41DQj9cBAlxLtDv6AGzq7ZKOs88XgjQ
+
+### The downstream endpoint.
+### Inbound: the caller's token authenticates this request.
+### Outbound: the Bank API obtains its own service token automatically.
+### Watch the Authorization Server console when this executes -- you will see a
+### POST /oauth2/token request arrive from bank-service.
+GET http://localhost:8080/api/v1/accounts/downstream
+Authorization: Bearer <paste-any-valid-token-here>

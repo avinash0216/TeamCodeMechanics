@@ -1,0 +1,79 @@
+# Banking BFF configuration.
+#
+# Most of the OAuth client behavior is configured here rather than in code.
+# Spring Security reads this configuration on startup and wires up the
+# OAuth flow, token storage, and refresh logic automatically.
+
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        # Use a unique cookie name for the BFF's session.
+        # The default name is JSESSIONID, which is also the default name
+        # used by the auth server and the resource server. Because all three
+        # apps run on localhost, the browser sends the same JSESSIONID cookie
+        # to all of them, and each app overwrites the others' sessions. The
+        # result is non-deterministic 401 errors. Giving the BFF its own
+        # cookie name avoids the collision entirely.
+        name: BFF_SESSION
+
+spring:
+  application:
+    name: bankbff
+
+  security:
+    oauth2:
+      client:
+        registration:
+          # The 'bank-auth' name is a local label; you reference it in URLs
+          # like /oauth2/authorization/bank-auth.
+          bank-auth:
+            # TODO 3.1: Set the client-id to match the registration in the
+            # auth server (Exercise 1).
+            client-id: bank-client-bff
+
+            # TODO 3.2: Set the client-secret to match the auth server.
+            client-secret: bank-client-bff-secret
+
+            # TODO 3.3: Set the grant type. The BFF is a confidential client
+            # acting on behalf of a user, so use authorization_code.
+            authorization-grant-type: authorization_code
+
+            # TODO 3.4: Set the redirect-uri using Spring's placeholder syntax.
+            # The pattern is: "{baseUrl}/login/oauth2/code/{registrationId}".
+            # Spring fills in the placeholders at runtime.
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+            # TODO 3.5: Request these scopes:
+            #   openid, profile, account.read, account.write, account.create,
+            #   transaction.read, transaction.create, customer.read, customer.write
+            scope:
+              - openid
+              - profile
+              - account.read
+              - account.write
+              - account.create
+              - transaction.read
+              - transaction.create
+              - customer.read
+              - customer.write
+
+        provider:
+          bank-auth:
+            # TODO 3.6: Set the issuer-uri. Spring will discover the rest of
+            # the OAuth endpoints from the standard well-known location
+            # (issuer-uri + /.well-known/openid-configuration).
+            # IMPORTANT: use 127.0.0.1, not localhost, to match Lab 2-1.
+            issuer-uri: http://127.0.0.1:9000
+
+# Banking resource server (downstream API the BFF proxies to).
+banking:
+  resource-server:
+    base-url: http://localhost:8081
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: DEBUG
+    com.example.bankbff: DEBUG
