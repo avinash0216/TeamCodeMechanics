@@ -62,7 +62,7 @@ POST http://127.0.0.1:9000/oauth2/token
 Authorization: Basic YmFuay1jbGllbnQtYmZmOmJhbmstY2xpZW50LWJmZi1zZWNyZXQ=
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=authorization_code&code=DS5HGig8uq9gZyZErye7nj5ePRC5eZYtwiIw2bvVWZKpNSp1TNUdEfLhxFAW26Bv3Bt-9qEkez7Q_ZbXnkOiU118AZyJMGlGmg7TzUt-MS69DjwjjY9wInYpspHhO8cE&redirect_uri=http://localhost:8080/login/oauth2/code/bank-auth
+grant_type=authorization_code&code=Ve4treCgMIBCzbcolgUbNo1dY-rpQfsc6QRySybmHI9maBQN3_A3QfDp_ZdsfNBp8IOFM-NrvKNdX6ZHBcdn46R807CYfpf-AA0V3N-nlhiuajQpJEvwnzyBL_hhw1sU&redirect_uri=http://localhost:8080/login/oauth2/code/bank-auth
 
 > {%
     client.test("token exchange returns 200", function () {
