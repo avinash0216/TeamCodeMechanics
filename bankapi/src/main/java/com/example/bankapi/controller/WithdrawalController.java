@@ -19,7 +19,7 @@ public class WithdrawalController {
         this.transactionService = transactionService;
     }
 
-    @PostMapping
+    @PostMapping("/withdrawals")
     public WithdrawalResponse withdraw(@Valid @RequestBody WithdrawalRequest request) {
         return transactionService.withdrawFromAccount(request);
     }

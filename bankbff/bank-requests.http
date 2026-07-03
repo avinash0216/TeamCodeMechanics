@@ -36,7 +36,7 @@ Accept: application/json
 ### do not survive a restart.
 ###############################################################################
 
-@sessionCookie = BFF_SESSION=BBE112C240ECEDB8CDDA84BC65288CFE
+@sessionCookie = BFF_SESSION=AD3ED18704F62625576C90EB27972AD0
 
 
 ###############################################################################
@@ -64,6 +64,29 @@ Content-Type: application/json
   "toAccountNumber": "128-9878-002",
   "amount": 100.00
 }
+
+### /api/deposits --post request to deposit
+POST {{bff}}/api/deposits
+Accept: application/json
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-002",
+  "amount": 116.00
+}
+
+### /api/withdrawals --post request to withdraw
+POST {{bff}}/api/withdrawals
+Accept: application/json
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-002",
+  "amount": 116.00
+}
+
 
 ### /api/accounts again -- A001 balance should be lower, A002 should be higher
 GET {{bff}}/api/accounts

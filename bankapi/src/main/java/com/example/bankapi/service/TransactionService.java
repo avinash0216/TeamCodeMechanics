@@ -126,8 +126,8 @@ public class TransactionService {
     public DepositResponse depositToAccount(DepositRequest request) {
         validatePositiveAmount(request.amount(), "Deposit amount must be positive");
 
-        Long accountId = parseAccountId(request.accountId());
-        Account account = accountRepository.findById(accountId)
+        String accountNumber = parseAccountNumber(request.accountNumber());
+        Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
         validateOwnership(account, isCurrentUserTeller());
@@ -142,9 +142,8 @@ public class TransactionService {
     @Transactional
     public WithdrawalResponse withdrawFromAccount(WithdrawalRequest request) {
         validatePositiveAmount(request.amount(), "Withdrawal amount must be positive");
-
-        Long accountId = parseAccountId(request.accountId());
-        Account account = accountRepository.findById(accountId)
+        String accountNumber = parseAccountNumber(request.accountNumber());
+        Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
         validateOwnership(account, isCurrentUserTeller());
@@ -194,14 +193,11 @@ public class TransactionService {
         }
     }
 
-    private Long parseAccountId(String accountId) {
-        if (accountId == null || accountId.isBlank()) {
-            throw new IllegalArgumentException("Account ID is required");
+    private String parseAccountNumber(String accountNumber) {
+        if (accountNumber == null || accountNumber.isBlank()) {
+            throw new IllegalArgumentException("Account Number is required");
         }
-        if (!accountId.chars().allMatch(Character::isDigit)) {
-            throw new IllegalArgumentException("Account ID must be numeric");
-        }
-        return Long.valueOf(accountId);
+        return accountNumber;
     }
 
     private Transaction createAndSaveTransaction(Long accountId, String transactionType, BigDecimal amount, String description) {
