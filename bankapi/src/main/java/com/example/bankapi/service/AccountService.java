@@ -121,6 +121,7 @@ public class AccountService {
     private com.example.bankapi.model.Account convertAccountEntityToModel(Account entityAccount) {
         // Map entity fields to model using the entity's accessible properties
         return new com.example.bankapi.model.Account(
+                entityAccount.getAccountId(),
                 entityAccount.getAccountNumber(),
                 String.valueOf(entityAccount.getCustomerId()),
                 entityAccount.getAccountType(),

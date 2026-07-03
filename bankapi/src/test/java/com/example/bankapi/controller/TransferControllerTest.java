@@ -3,7 +3,7 @@ package com.example.bankapi.controller;
 import com.example.bankapi.model.TransactionStatus;
 import com.example.bankapi.model.TransferRequest;
 import com.example.bankapi.model.TransferResponse;
-import com.example.bankapi.service.TransferService;
+import com.example.bankapi.service.TransactionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -34,14 +34,14 @@ class TransferControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private TransferService transferService;
+    private TransactionService transactionService;
 
     @Test
     void transfer_ReturnsTransferResponse() throws Exception {
-        TransferRequest request = new TransferRequest(1001L, 1002L, new BigDecimal("25.00"), "test transfer");
+        TransferRequest request = new TransferRequest("123456789012", "123456789013", new BigDecimal("25.00"), "test transfer");
         TransferResponse response = new TransferResponse("D-1", "C-1", TransactionStatus.COMPLETE);
 
-        when(transferService.transferBetweenAccountsSameCustomer(request)).thenReturn(response);
+        when(transactionService.transferBetweenAccountsSameCustomer(request)).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/transfers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -52,9 +52,9 @@ class TransferControllerTest {
                 .andExpect(jsonPath("$.status").value("COMPLETE"));
 
         ArgumentCaptor<TransferRequest> captor = ArgumentCaptor.forClass(TransferRequest.class);
-        verify(transferService).transferBetweenAccountsSameCustomer(captor.capture());
-        assertThat(captor.getValue().fromAccountId()).isEqualTo(1001L);
-        assertThat(captor.getValue().toAccountId()).isEqualTo(1002L);
+        verify(transactionService).transferBetweenAccountsSameCustomer(captor.capture());
+        assertThat(captor.getValue().fromAccountNumber()).isEqualTo("123456789012");
+        assertThat(captor.getValue().toAccountNumber()).isEqualTo("123456789013");
         assertThat(captor.getValue().amount()).isEqualByComparingTo("25.00");
     }
 }

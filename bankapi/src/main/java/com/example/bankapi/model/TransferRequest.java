@@ -1,15 +1,15 @@
 package com.example.bankapi.model;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 
 public record TransferRequest(
-        @NotNull(message = "From account ID is required")
-        Long fromAccountId,
+        @NotBlank(message = "From account number is required")
+        String fromAccountNumber,
         
-        @NotNull(message = "To account ID is required")
-        Long toAccountId,
+        @NotBlank(message = "To account number is required")
+        String toAccountNumber,
         
         @Positive(message = "Transfer amount must be positive")
         BigDecimal amount,

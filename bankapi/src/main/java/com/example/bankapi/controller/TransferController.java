@@ -2,25 +2,22 @@ package com.example.bankapi.controller;
 
 import com.example.bankapi.model.TransferRequest;
 import com.example.bankapi.model.TransferResponse;
-import com.example.bankapi.service.TransferService;
+import com.example.bankapi.service.TransactionService;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/transfers")
 public class TransferController {
 
-    private final TransferService transferService;
+    private final TransactionService transactionService;
 
-    public TransferController(TransferService transferService) {
-        this.transferService = transferService;
+    public TransferController(TransactionService transactionService) {
+        this.transactionService = transactionService;
     }
 
-    @PostMapping
+    @PostMapping("/transfers")
     public TransferResponse transfer(@Valid @RequestBody TransferRequest request) {
-        return transferService.transferBetweenAccountsSameCustomer(request);
+        return transactionService.transferBetweenAccountsSameCustomer(request);
     }
 }

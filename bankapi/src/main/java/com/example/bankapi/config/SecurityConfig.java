@@ -32,7 +32,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/v1/accounts/**").permitAll()
                         //.requestMatchers(HttpMethod.GET,"/api/v1/accounts/**").hasAuthority("SCOPE_account.read")
                         //.requestMatchers(HttpMethod.POST,"/api/v1/accounts").hasAuthority("SCOPE_account.create")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/transfers").hasAuthority("SCOPE_transaction.create")
+                        //.requestMatchers(HttpMethod.POST, "/api/v1/transfers").hasAuthority("SCOPE_transaction.create")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/transfers").permitAll()
                         .anyRequest().authenticated()
                 )
 

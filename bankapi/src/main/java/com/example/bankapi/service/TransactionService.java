@@ -2,9 +2,13 @@ package com.example.bankapi.service;
 
 import com.example.bankapi.entity.Account;
 import com.example.bankapi.entity.Transaction;
+import com.example.bankapi.model.DepositRequest;
+import com.example.bankapi.model.DepositResponse;
 import com.example.bankapi.model.TransactionStatus;
 import com.example.bankapi.model.TransferRequest;
 import com.example.bankapi.model.TransferResponse;
+import com.example.bankapi.model.WithdrawalRequest;
+import com.example.bankapi.model.WithdrawalResponse;
 import com.example.bankapi.repository.AccountRepository;
 import com.example.bankapi.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -23,15 +27,15 @@ import java.util.Optional;
  * or the entire operation rolls back.
  */
 @Service
-public class TransferService {
+public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final AuthenticatedUserService authenticatedUserService;
 
-    public TransferService(TransactionRepository transactionRepository,
-                           AccountRepository accountRepository,
-                           AuthenticatedUserService authenticatedUserService) {
+    public TransactionService(TransactionRepository transactionRepository,
+                              AccountRepository accountRepository,
+                              AuthenticatedUserService authenticatedUserService) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.authenticatedUserService = authenticatedUserService;
@@ -42,7 +46,7 @@ public class TransferService {
      * Extracts customer_number (sub claim) directly from OAuth2 token,
      * resolves to customerId, validates ownership, and creates transactions atomically.
      *
-     * @param request the transfer request with account IDs, amount, and description
+     * @param request the transfer request with account numbers, amount, and description
      * @return a TransferResult containing the debit and credit transactions
      * @throws IllegalArgumentException if customer not found, accounts don't exist, don't belong to customer,
      *         or amount is invalid
@@ -50,11 +54,7 @@ public class TransferService {
      */
     @Transactional
     public TransferResponse transferBetweenAccountsSameCustomer(TransferRequest request) {
-        List<String> roles = authenticatedUserService.getCurrentJwt().getClaimAsStringList("roles");
-        if (roles == null) {
-            roles = List.of();
-        }
-        boolean isTeller = roles.stream().anyMatch("teller"::equalsIgnoreCase);
+        boolean isTeller = isCurrentUserTeller();
 
         Long customerId = isTeller ? null : authenticatedUserService.getCurrentCustomerId();
 
@@ -63,19 +63,19 @@ public class TransferService {
             throw new IllegalArgumentException("Transfer amount must be positive");
         }
 
-        if (request.fromAccountId().equals(request.toAccountId())) {
+        if (request.fromAccountNumber().equals(request.toAccountNumber())) {
             throw new IllegalArgumentException("Cannot transfer to the same account");
         }
 
-        // Fetch and validate source account by ID
-        Account fromAccount = accountRepository.findById(request.fromAccountId())
+        // Fetch and validate source account by account number
+        Account fromAccount = accountRepository.findByAccountNumber(request.fromAccountNumber())
                 .orElseThrow(() -> new IllegalArgumentException("Source account not found"));
         if (!isTeller && !fromAccount.getCustomerId().equals(customerId)) {
             throw new IllegalArgumentException("Source account does not belong to this customer");
         }
 
-        // Fetch and validate destination account by ID
-        Account toAccount = accountRepository.findById(request.toAccountId())
+        // Fetch and validate destination account by account number
+        Account toAccount = accountRepository.findByAccountNumber(request.toAccountNumber())
                 .orElseThrow(() -> new IllegalArgumentException("Destination account not found"));
 
         if (!isTeller && !toAccount.getCustomerId().equals(customerId)) {
@@ -122,6 +122,44 @@ public class TransferService {
         return new TransferResponse(savedDebitTxn.getTxnId(), savedCreditTxn.getTxnId(), TransactionStatus.COMPLETE);
     }
 
+    @Transactional
+    public DepositResponse depositToAccount(DepositRequest request) {
+        validatePositiveAmount(request.amount(), "Deposit amount must be positive");
+
+        Long accountId = parseAccountId(request.accountId());
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        validateOwnership(account, isCurrentUserTeller());
+
+        account.setBalance(account.getBalance().add(request.amount()));
+        accountRepository.save(account);
+
+        Transaction savedDeposit = createAndSaveTransaction(account.getAccountId(), "DEPOSIT", request.amount(), "Deposit");
+        return new DepositResponse(savedDeposit.getTxnId(), request.amount(), TransactionStatus.COMPLETE.name());
+    }
+
+    @Transactional
+    public WithdrawalResponse withdrawFromAccount(WithdrawalRequest request) {
+        validatePositiveAmount(request.amount(), "Withdrawal amount must be positive");
+
+        Long accountId = parseAccountId(request.accountId());
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        validateOwnership(account, isCurrentUserTeller());
+
+        if (account.getBalance().compareTo(request.amount()) < 0) {
+            throw new IllegalArgumentException("Insufficient balance in account");
+        }
+
+        account.setBalance(account.getBalance().subtract(request.amount()));
+        accountRepository.save(account);
+
+        Transaction savedWithdrawal = createAndSaveTransaction(account.getAccountId(), "WITHDRAWAL", request.amount(), "Withdrawal");
+        return new WithdrawalResponse(savedWithdrawal.getTxnId(), request.amount(), TransactionStatus.COMPLETE.name());
+    }
+
     /**
      * Get a transaction by its ID.
      *
@@ -130,5 +168,50 @@ public class TransferService {
      */
     public Optional<Transaction> getTransactionById(String txnId) {
         return transactionRepository.findById(txnId);
+    }
+
+    private boolean isCurrentUserTeller() {
+        List<String> roles = authenticatedUserService.getCurrentJwt().getClaimAsStringList("roles");
+        if (roles == null) {
+            roles = List.of();
+        }
+        return roles.stream().anyMatch("teller"::equalsIgnoreCase);
+    }
+
+    private void validateOwnership(Account account, boolean isTeller) {
+        if (isTeller) {
+            return;
+        }
+        Long customerId = authenticatedUserService.getCurrentCustomerId();
+        if (!account.getCustomerId().equals(customerId)) {
+            throw new IllegalArgumentException("Account does not belong to this customer");
+        }
+    }
+
+    private void validatePositiveAmount(BigDecimal amount, String message) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+
+    private Long parseAccountId(String accountId) {
+        if (accountId == null || accountId.isBlank()) {
+            throw new IllegalArgumentException("Account ID is required");
+        }
+        if (!accountId.chars().allMatch(Character::isDigit)) {
+            throw new IllegalArgumentException("Account ID must be numeric");
+        }
+        return Long.valueOf(accountId);
+    }
+
+    private Transaction createAndSaveTransaction(Long accountId, String transactionType, BigDecimal amount, String description) {
+        Transaction transaction = new Transaction();
+        transaction.setTxnType(transactionType);
+        transaction.setAccountId(accountId);
+        transaction.setAmount(amount);
+        transaction.setStatus("COMPLETED");
+        transaction.setTxnDate(LocalDateTime.now());
+        transaction.setDescription(description);
+        return transactionRepository.save(transaction);
     }
 }
