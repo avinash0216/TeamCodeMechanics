@@ -44,10 +44,19 @@ public class BankingApiClient {
 
     public DepositResponseDto postDeposit(DepositRequestDto request) {
         return bankApiWebClient.post()
-                .uri("/api/v1/deposits")
+                .uri("/api/v1/deposits/deposits")
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(DepositResponseDto.class)
+                .block();
+    }
+
+    public WithdrawalResponseDto postWithdrawal(WithdrawalRequestDto request) {
+        return bankApiWebClient.post()
+                .uri("/api/v1/withdrawals/withdrawals")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(WithdrawalResponseDto.class)
                 .block();
     }
 }

@@ -19,7 +19,7 @@ public class DepositController {
         this.transactionService = transactionService;
     }
 
-    @PostMapping
+    @PostMapping("/deposits")
     public DepositResponse deposit(@Valid @RequestBody DepositRequest request) {
         return transactionService.depositToAccount(request);
     }
