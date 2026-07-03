@@ -29,7 +29,7 @@ spring:
           # The 'bank-auth' name is a local label; you reference it in URLs
           # like /oauth2/authorization/bank-auth.
           bank-auth:
-            # TODO 3.1: Set the client-id to match the registration in the
+            # TODO 3.1: Set the client-AccountId to match the registration in the
             # auth server (Exercise 1).
             client-id: bank-client-bff
 

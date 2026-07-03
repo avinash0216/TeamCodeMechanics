@@ -36,7 +36,7 @@ Accept: application/json
 ### do not survive a restart.
 ###############################################################################
 
-@sessionCookie = BFF_SESSION=0ED226DCE55A957A1614EB7663813FAD
+@sessionCookie = BFF_SESSION=BBE112C240ECEDB8CDDA84BC65288CFE
 
 
 ###############################################################################
@@ -60,8 +60,8 @@ Cookie: {{sessionCookie}}
 Content-Type: application/json
 
 {
-  "fromAccountId": "A001",
-  "toAccountId": "A002",
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
   "amount": 100.00
 }
 

@@ -3,7 +3,7 @@ package com.example.bankbff.dto;
 import java.math.BigDecimal;
 
 public record TransferRequestDto(
-        String fromAccountId,
-        String toAccountId,
+        String fromAccountNumber,
+        String toAccountNumber,
         BigDecimal amount
 ) {}

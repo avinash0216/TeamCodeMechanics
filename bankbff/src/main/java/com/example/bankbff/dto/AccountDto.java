@@ -5,10 +5,11 @@ import java.math.BigDecimal;
 /**
  * Account as returned from bankapi.
  *
- * Field names match the JSON exactly: id, customerId, accountType, balance.
+ * Field names match the JSON exactly: accountId, accountNumber, customerId, accountType, balance.
  */
 public record AccountDto(
-        String id,
+        Long accountId,
+        String accountNumber,
         String customerId,
         String accountType,
         BigDecimal balance
