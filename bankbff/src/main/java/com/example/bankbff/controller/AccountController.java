@@ -39,12 +39,14 @@ public class AccountController {
     }
 
     @PostMapping("/deposits")
-    public void SubmitDeposit(@RequestBody TransferRequestDto request) {
+    public DepositResponseDto SubmitDeposit(@RequestBody DepositRequestDto request) {
         // Implement the logic to submit a deposit
+        return new DepositResponseDto("Deposit submitted successfully", BigDecimal.valueOf(123456789L), "SUCCESS");
     }
 
     @PostMapping("/withdrawals")
-    public void SubmitWithdrawal(@RequestBody TransferRequestDto request) {
+    public WithdrawalResponseDto SubmitWithdrawal(@RequestBody WithdrawalRequestDto request) {
         // Implement the logic to submit a withdrawal
+        return new WithdrawalResponseDto("Withdrawal submitted successfully", BigDecimal.valueOf(123456789L), "SUCCESS");
     }
 }
