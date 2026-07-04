@@ -7,7 +7,7 @@ import java.math.BigDecimal;
  *
  * Field names match the JSON exactly: accountNumber, accountNumber, customerId, accountType, balance.
  */
-public record AccountDto(
+public record Account(
         Long accountId,
         String accountNumber,
         String customerId,

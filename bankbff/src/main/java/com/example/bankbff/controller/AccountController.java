@@ -2,6 +2,8 @@ package com.example.bankbff.controller;
 
 import com.example.bankbff.client.BankingApiClient;
 import com.example.bankbff.dto.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,29 +24,39 @@ public class AccountController {
     }
 
     @GetMapping("/accounts")
-    public List<AccountDto> accounts() {
-        return bankingApiClient.getAccounts();
+    public ResponseEntity<ApiResponse<List<Account>>> accounts() {
+        List<Account> accounts = bankingApiClient.getAccounts();
+        ApiResponse<List<Account>> resp = ApiResponse.success(HttpStatus.OK.toString(), "SUCCESS", "", accounts);
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/transfers")
-    public TransferResponseDto transfer(@RequestBody TransferRequestDto request) {
-        return bankingApiClient.postTransfer(request);
+    public ResponseEntity<ApiResponse<TransferResponse>> transfer(@RequestBody TransferRequest request) {
+        TransferResponse response = bankingApiClient.postTransfer(request);
+        ApiResponse<TransferResponse> resp = ApiResponse.success(HttpStatus.OK.toString(), "SUCCESS", "", response);
+        return ResponseEntity.ok(resp);
     }
 
 
     @PostMapping("/payments")
-    public PaymentResponseDto SubmitPayment(@RequestBody PaymentRequestDto request) {
+    public ResponseEntity<ApiResponse<PaymentResponse>> SubmitPayment(@RequestBody PaymentRequest request) {
         // Implement the logic to submit a payment
-        return new PaymentResponseDto("Payment submitted successfully", BigDecimal.valueOf(123456789L), "SUCCESS");
+        PaymentResponse response = new PaymentResponse("Payment submitted successfully", BigDecimal.valueOf(123456789L), "SUCCESS");
+        ApiResponse<PaymentResponse> resp = ApiResponse.success(HttpStatus.OK.toString(), "SUCCESS", "", response);
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/deposits")
-    public DepositResponseDto SubmitDeposit(@RequestBody DepositRequestDto request) {
-        return bankingApiClient.postDeposit(request);
+    public ResponseEntity<ApiResponse<DepositResponse>> SubmitDeposit(@RequestBody DepositRequest request) {
+        DepositResponse response = bankingApiClient.postDeposit(request);
+        ApiResponse<DepositResponse> resp = ApiResponse.success(HttpStatus.OK.toString(), "OK", "", response);
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/withdrawals")
-    public WithdrawalResponseDto SubmitWithdrawal(@RequestBody WithdrawalRequestDto request) {
-        return bankingApiClient.postWithdrawal(request);
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> SubmitWithdrawal(@RequestBody WithdrawalRequest request) {
+        WithdrawalResponse response = bankingApiClient.postWithdrawal(request);
+        ApiResponse<WithdrawalResponse> resp = ApiResponse.success(HttpStatus.OK.toString(), "SUCCESS", "", response);
+        return ResponseEntity.ok(resp);
     }
 }

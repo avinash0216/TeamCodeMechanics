@@ -4,6 +4,8 @@ import com.example.bankapi.model.WithdrawalRequest;
 import com.example.bankapi.model.WithdrawalResponse;
 import com.example.bankapi.service.TransactionService;
 import jakarta.validation.Valid;
+import java.net.URI;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +22,8 @@ public class WithdrawalController {
     }
 
     @PostMapping("/withdrawals")
-    public WithdrawalResponse withdraw(@Valid @RequestBody WithdrawalRequest request) {
-        return transactionService.withdrawFromAccount(request);
+    public ResponseEntity<WithdrawalResponse> withdraw(@Valid @RequestBody WithdrawalRequest request) {
+        WithdrawalResponse response = transactionService.withdrawFromAccount(request);
+        return ResponseEntity.created(URI.create("/api/v1/transactions/" + response.transactionId())).body(response);
     }
 }

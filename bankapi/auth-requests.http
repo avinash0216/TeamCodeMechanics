@@ -77,11 +77,11 @@ Content-Type: application/json
 }
 
 ### Post deoposit with token with transaction.create scope -- should return 200.
-POST http://localhost:8081/api/v1/deposits/
+POST http://localhost:8081/api/v1/deposits/deposits
 Content-Type: application/json
 
 {
-  "accountNumber": "128-9878-002",
+  "accountNumber": "128-9878-00234",
   "amount": 100.00
 }
 

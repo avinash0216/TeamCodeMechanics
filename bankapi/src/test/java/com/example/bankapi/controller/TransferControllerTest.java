@@ -1,6 +1,7 @@
 package com.example.bankapi.controller;
 
-import com.example.bankapi.model.TransactionStatus;
+import com.example.bankapi.model.enums.TransactionStatus;
+import com.example.bankapi.model.TransactionSummary;
 import com.example.bankapi.model.TransferRequest;
 import com.example.bankapi.model.TransferResponse;
 import com.example.bankapi.service.TransactionService;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -39,7 +41,10 @@ class TransferControllerTest {
     @Test
     void transfer_ReturnsTransferResponse() throws Exception {
         TransferRequest request = new TransferRequest("123456789012", "123456789013", new BigDecimal("25.00"), "test transfer");
-        TransferResponse response = new TransferResponse("D-1", "C-1", TransactionStatus.COMPLETE);
+        
+        TransactionSummary debitTxn = new TransactionSummary("D-1", "123456789012", new BigDecimal("25.00"), Instant.now(), "TRANSFER_OUT", "COMPLETED");
+        TransactionSummary creditTxn = new TransactionSummary("C-1", "123456789013", new BigDecimal("25.00"), Instant.now(), "TRANSFER_IN", "COMPLETED");
+        TransferResponse response = new TransferResponse("T-1", debitTxn, creditTxn, TransactionStatus.COMPLETE);
 
         when(transactionService.transferBetweenAccountsSameCustomer(request)).thenReturn(response);
 
@@ -47,8 +52,9 @@ class TransferControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.debitTransactionId").value("D-1"))
-                .andExpect(jsonPath("$.creditTransactionId").value("C-1"))
+                .andExpect(jsonPath("$.transferId").value("T-1"))
+                .andExpect(jsonPath("$.debitTransaction.transactionId").value("D-1"))
+                .andExpect(jsonPath("$.creditTransaction.transactionId").value("C-1"))
                 .andExpect(jsonPath("$.status").value("COMPLETE"));
 
         ArgumentCaptor<TransferRequest> captor = ArgumentCaptor.forClass(TransferRequest.class);

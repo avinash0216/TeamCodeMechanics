@@ -15,7 +15,7 @@ import java.util.List;
  *   fullName:         the user's display name from the token.
  *   roles:            the user's roles (account_holder, teller, auditor).
  */
-public record UserInfoDto(
+public record UserInfo(
         String subject,
         String preferredUsername,
         String fullName,

@@ -16,47 +16,47 @@ public class BankingApiClient {
         this.bankApiWebClient = bankApiWebClient;
     }
 
-    public List<AccountDto> getAccounts() {
+    public List<Account> getAccounts() {
         return bankApiWebClient.get()
                 .uri("/api/v1/accounts/accounts")
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<AccountDto>>() {})
+                .bodyToMono(new ParameterizedTypeReference<List<Account>>() {})
                 .block();
     }
 
-    public TransferResponseDto postTransfer(TransferRequestDto request) {
+    public TransferResponse postTransfer(TransferRequest request) {
         return bankApiWebClient.post()
                 .uri("/api/v1/transfers/transfers")
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(TransferResponseDto.class)
+                .bodyToMono(TransferResponse.class)
                 .block();
     }
 
-    public PaymentResponseDto postPayment(PaymentRequestDto request) {
+    public PaymentResponse postPayment(PaymentRequest request) {
         return bankApiWebClient.post()
                 .uri("/api/v1/payments")
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(PaymentResponseDto.class)
+                .bodyToMono(PaymentResponse.class)
                 .block();
     }
 
-    public DepositResponseDto postDeposit(DepositRequestDto request) {
+    public DepositResponse postDeposit(DepositRequest request) {
         return bankApiWebClient.post()
                 .uri("/api/v1/deposits/deposits")
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(DepositResponseDto.class)
+                .bodyToMono(DepositResponse.class)
                 .block();
     }
 
-    public WithdrawalResponseDto postWithdrawal(WithdrawalRequestDto request) {
+    public WithdrawalResponse postWithdrawal(WithdrawalRequest request) {
         return bankApiWebClient.post()
                 .uri("/api/v1/withdrawals/withdrawals")
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(WithdrawalResponseDto.class)
+                .bodyToMono(WithdrawalResponse.class)
                 .block();
     }
 }

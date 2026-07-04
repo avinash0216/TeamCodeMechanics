@@ -1,6 +1,6 @@
 package com.example.bankbff.controller;
 
-import com.example.bankbff.dto.UserInfoDto;
+import com.example.bankbff.dto.UserInfo;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,12 +14,12 @@ import java.util.List;
 public class UserController {
 
     @GetMapping("/me")
-    public UserInfoDto me(@AuthenticationPrincipal OidcUser principal) {
+    public UserInfo me(@AuthenticationPrincipal OidcUser principal) {
         List<String> roles = principal.getClaimAsStringList("roles");
         if (roles == null) {
             roles = List.of();
         }
-        return new UserInfoDto(
+        return new UserInfo(
                 principal.getSubject(),
                 principal.getPreferredUsername(),
                 principal.getFullName(),

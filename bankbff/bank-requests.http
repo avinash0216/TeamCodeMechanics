@@ -36,7 +36,7 @@ Accept: application/json
 ### do not survive a restart.
 ###############################################################################
 
-@sessionCookie = BFF_SESSION=AD3ED18704F62625576C90EB27972AD0
+@sessionCookie = BFF_SESSION=1F7D7767ABDDE76B33A276F6408F4FDA
 
 
 ###############################################################################
@@ -72,7 +72,7 @@ Cookie: {{sessionCookie}}
 Content-Type: application/json
 
 {
-  "accountNumber": "128-9878-002",
+  "accountNumber": "128-9878-001",
   "amount": 116.00
 }
 

@@ -2,17 +2,24 @@ package com.example.bankapi.service;
 
 import com.example.bankapi.entity.Account;
 import com.example.bankapi.entity.Transaction;
+import com.example.bankapi.entity.Transfer;
+import com.example.bankapi.exception.AccountNotFoundException;
+import com.example.bankapi.exception.BusinessRuleException;
+import com.example.bankapi.exception.MalformedRequestException;
 import com.example.bankapi.model.DepositRequest;
 import com.example.bankapi.model.DepositResponse;
-import com.example.bankapi.model.TransactionStatus;
+import com.example.bankapi.model.enums.TransactionStatus;
+import com.example.bankapi.model.TransactionSummary;
 import com.example.bankapi.model.TransferRequest;
 import com.example.bankapi.model.TransferResponse;
 import com.example.bankapi.model.WithdrawalRequest;
 import com.example.bankapi.model.WithdrawalResponse;
 import com.example.bankapi.repository.AccountRepository;
 import com.example.bankapi.repository.TransactionRepository;
+import com.example.bankapi.repository.TransferRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,13 +38,16 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
+    private final TransferRepository transferRepository;
     private final AuthenticatedUserService authenticatedUserService;
 
     public TransactionService(TransactionRepository transactionRepository,
                               AccountRepository accountRepository,
+                              TransferRepository transferRepository,
                               AuthenticatedUserService authenticatedUserService) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
+        this.transferRepository = transferRepository;
         this.authenticatedUserService = authenticatedUserService;
     }
 
@@ -60,35 +70,34 @@ public class TransactionService {
 
         // Validate amount
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Transfer amount must be positive");
+           throw new MalformedRequestException("NON_POSITIVE", "amount", "Transfer amount must be positive");
         }
 
         if (request.fromAccountNumber().equals(request.toAccountNumber())) {
-            throw new IllegalArgumentException("Cannot transfer to the same account");
+           throw new MalformedRequestException("INVALID_REQUEST", "Transfer cannot be to the same account");
         }
 
         // Fetch and validate source account by account number
         Account fromAccount = accountRepository.findByAccountNumber(request.fromAccountNumber())
-                .orElseThrow(() -> new IllegalArgumentException("Source account not found"));
+               .orElseThrow(() -> new AccountNotFoundException(request.fromAccountNumber()));
         if (!isTeller && !fromAccount.getCustomerId().equals(customerId)) {
-            throw new IllegalArgumentException("Source account does not belong to this customer");
+           throw new MalformedRequestException("UNAUTHORIZED", "Source account does not belong to this customer");
         }
 
         // Fetch and validate destination account by account number
         Account toAccount = accountRepository.findByAccountNumber(request.toAccountNumber())
-                .orElseThrow(() -> new IllegalArgumentException("Destination account not found"));
+               .orElseThrow(() -> new AccountNotFoundException( request.toAccountNumber()));
 
         if (!isTeller && !toAccount.getCustomerId().equals(customerId)) {
-            throw new IllegalArgumentException("Destination account does not belong to this customer");
+           throw new MalformedRequestException("UNAUTHORIZED", "Destination account does not belong to this customer");
         }
         if (isTeller && !toAccount.getCustomerId().equals(fromAccount.getCustomerId())) {
-            throw new IllegalArgumentException("Teller transfers must be between accounts owned by the same customer");
+           throw new MalformedRequestException("INVALID_REQUEST", "Teller transfers must be between accounts owned by the same customer");
         }
+        validateAccountActive(toAccount);
 
         // Validate source account has sufficient balance
-        if (fromAccount.getBalance().compareTo(request.amount()) < 0) {
-            throw new IllegalArgumentException("Insufficient balance in source account");
-        }
+        validateInsufficientFunds(request, fromAccount);
 
         // Create debit transaction (withdrawal from source)
         Transaction debitTransaction = new Transaction();
@@ -116,19 +125,42 @@ public class TransactionService {
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
 
-        //Update Transfer table
-        //TODO
+        // Save Transfer record
+        Transfer transfer = new Transfer();
+        transfer.setTransferId(UUID.randomUUID().toString());
+        transfer.setDebitTxnId(savedDebitTxn.getTxnId());
+        transfer.setCreditTxnId(savedCreditTxn.getTxnId());
+        transfer.setCreatedDate(LocalDateTime.now());
+        transferRepository.save(transfer);
 
-        return new TransferResponse(savedDebitTxn.getTxnId(), savedCreditTxn.getTxnId(), TransactionStatus.COMPLETE);
+        TransactionSummary debitSummary = new TransactionSummary(
+                savedDebitTxn.getTxnId(),
+                fromAccount.getAccountNumber(),
+                savedDebitTxn.getAmount(),
+                savedDebitTxn.getTxnDate().atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                savedDebitTxn.getTxnType(),
+                savedDebitTxn.getStatus()
+        );
+
+        TransactionSummary creditSummary = new TransactionSummary(
+                savedCreditTxn.getTxnId(),
+                toAccount.getAccountNumber(),
+                savedCreditTxn.getAmount(),
+                savedCreditTxn.getTxnDate().atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                savedCreditTxn.getTxnType(),
+                savedCreditTxn.getStatus()
+        );
+
+        return new TransferResponse(transfer.getTransferId(), debitSummary, creditSummary, TransactionStatus.COMPLETE);
     }
 
     @Transactional
     public DepositResponse depositToAccount(DepositRequest request) {
-        validatePositiveAmount(request.amount(), "Deposit amount must be positive");
+        validatePositiveAmount(request.amount(), "amount");
 
-        String accountNumber = parseAccountNumber(request.accountNumber());
+        String accountNumber = parseAccountNumber(request.accountNumber(), "accountNumber");
         Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
 
         validateOwnership(account, isCurrentUserTeller());
 
@@ -136,27 +168,39 @@ public class TransactionService {
         accountRepository.save(account);
 
         Transaction savedDeposit = createAndSaveTransaction(account.getAccountId(), "DEPOSIT", request.amount(), "Deposit");
-        return new DepositResponse(savedDeposit.getTxnId(), request.amount(), TransactionStatus.COMPLETE.name());
+        return new DepositResponse(
+                savedDeposit.getTxnId(),
+                account.getAccountNumber(),
+                savedDeposit.getAmount(),
+                savedDeposit.getTxnDate().atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                savedDeposit.getStatus()
+        );
     }
 
     @Transactional
     public WithdrawalResponse withdrawFromAccount(WithdrawalRequest request) {
-        validatePositiveAmount(request.amount(), "Withdrawal amount must be positive");
-        String accountNumber = parseAccountNumber(request.accountNumber());
+        validatePositiveAmount(request.amount(), "amount");
+        String accountNumber = parseAccountNumber(request.accountNumber(), "accountNumber");
         Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
 
         validateOwnership(account, isCurrentUserTeller());
 
         if (account.getBalance().compareTo(request.amount()) < 0) {
-            throw new IllegalArgumentException("Insufficient balance in account");
+            throw new BusinessRuleException("INSUFFICIENT_FUNDS", "Insufficient balance in account");
         }
 
         account.setBalance(account.getBalance().subtract(request.amount()));
         accountRepository.save(account);
 
         Transaction savedWithdrawal = createAndSaveTransaction(account.getAccountId(), "WITHDRAWAL", request.amount(), "Withdrawal");
-        return new WithdrawalResponse(savedWithdrawal.getTxnId(), request.amount(), TransactionStatus.COMPLETE.name());
+        return new WithdrawalResponse(
+                savedWithdrawal.getTxnId(),
+                account.getAccountNumber(),
+                savedWithdrawal.getAmount(),
+                savedWithdrawal.getTxnDate().atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                savedWithdrawal.getStatus()
+        );
     }
 
     /**
@@ -177,25 +221,37 @@ public class TransactionService {
         return roles.stream().anyMatch("teller"::equalsIgnoreCase);
     }
 
+    private void validateInsufficientFunds(TransferRequest request, Account fromAccount) {
+        if (fromAccount.getBalance().compareTo(request.amount()) < 0) {
+            throw new BusinessRuleException("INSUFFICIENT_FUNDS", "Insufficient balance in source account");
+        }
+    }
+
     private void validateOwnership(Account account, boolean isTeller) {
         if (isTeller) {
             return;
         }
         Long customerId = authenticatedUserService.getCurrentCustomerId();
         if (!account.getCustomerId().equals(customerId)) {
-            throw new IllegalArgumentException("Account does not belong to this customer");
+            throw new MalformedRequestException("UNAUTHORIZED", "Account does not belong to this customer");
         }
     }
 
-    private void validatePositiveAmount(BigDecimal amount, String message) {
+    private void validatePositiveAmount(BigDecimal amount, String fieldName) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException(message);
+            throw new MalformedRequestException("NON_POSITIVE", fieldName, "Amount must be positive");
         }
     }
 
-    private String parseAccountNumber(String accountNumber) {
+    private void validateAccountActive(Account account){
+        if (!account.getAccountStatus().equalsIgnoreCase("ACTIVE")) {
+            throw new BusinessRuleException("ACCOUNT_INACTIVE", "Account is not active");
+        }
+    }
+
+    private String parseAccountNumber(String accountNumber, String fieldName) {
         if (accountNumber == null || accountNumber.isBlank()) {
-            throw new IllegalArgumentException("Account Number is required");
+            throw new MalformedRequestException("MISSING_FIELD", fieldName, "Account number is required");
         }
         return accountNumber;
     }
