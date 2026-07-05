@@ -29,7 +29,7 @@ public class SecurityConfig {
                                                   WebClient.Builder webClientBuilder) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/**", "/signed-out").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated())
 
@@ -52,13 +52,21 @@ public class SecurityConfig {
 
                 .oauth2Login(Customizer.withDefaults())
 
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/")
-                        .invalidateHttpSession(true)
-                        .clearAuthentication(true)
-                        .deleteCookies("BFF_SESSION")
-                )
+                .logout(logout -> {
+                    // Use OIDC RP-initiated logout so the Identity Provider clears the
+                    // SSO session before returning the user to a signed-out page.
+                    OidcClientInitiatedLogoutSuccessHandler oidcLogoutHandler =
+                            new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
+                    // After IdP logout, send the user to a public signed-out page.
+                    oidcLogoutHandler.setPostLogoutRedirectUri("{baseUrl}/signed-out");
+
+                    logout
+                            .logoutUrl("/logout")
+                            .logoutSuccessHandler(oidcLogoutHandler)
+                            .invalidateHttpSession(true)
+                            .clearAuthentication(true)
+                            .deleteCookies("BFF_SESSION");
+                })
 
                 .csrf(AbstractHttpConfigurer::disable);
 

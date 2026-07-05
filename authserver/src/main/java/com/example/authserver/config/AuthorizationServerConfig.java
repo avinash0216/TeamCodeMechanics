@@ -152,6 +152,11 @@ public class AuthorizationServerConfig {
                 // Post-logout redirect URI (Lab 4.8). Must match the BFF's
                 // setPostLogoutRedirectUri(...) character for character.
                 .postLogoutRedirectUri("http://localhost:5173/")
+                // Allow post-logout return to the BFF's signed-out page as well as
+                // the dev UI. The OIDC RP-initiated logout handler will request
+                // one of these URLs; the IdP must accept it (exact match).
+                .postLogoutRedirectUri("http://localhost:8080/signed-out")
+                .postLogoutRedirectUri("http://localhost:5173/signed-out")
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
                 .scope("account.read")
