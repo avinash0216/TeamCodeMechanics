@@ -3,20 +3,16 @@ package com.example.bankapi.service;
 import com.example.bankapi.entity.Account;
 import com.example.bankapi.entity.Transaction;
 import com.example.bankapi.entity.Transfer;
+import com.example.bankapi.event.TransactionCreatedEvent;
 import com.example.bankapi.exception.AccountNotFoundException;
 import com.example.bankapi.exception.BusinessRuleException;
 import com.example.bankapi.exception.MalformedRequestException;
-import com.example.bankapi.model.DepositRequest;
-import com.example.bankapi.model.DepositResponse;
+import com.example.bankapi.model.*;
 import com.example.bankapi.model.enums.TransactionStatus;
-import com.example.bankapi.model.TransactionSummary;
-import com.example.bankapi.model.TransferRequest;
-import com.example.bankapi.model.TransferResponse;
-import com.example.bankapi.model.WithdrawalRequest;
-import com.example.bankapi.model.WithdrawalResponse;
 import com.example.bankapi.repository.AccountRepository;
 import com.example.bankapi.repository.TransactionRepository;
 import com.example.bankapi.repository.TransferRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
@@ -40,15 +36,18 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final TransferRepository transferRepository;
     private final AuthenticatedUserService authenticatedUserService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public TransactionService(TransactionRepository transactionRepository,
                               AccountRepository accountRepository,
                               TransferRepository transferRepository,
-                              AuthenticatedUserService authenticatedUserService) {
+                              AuthenticatedUserService authenticatedUserService,
+                              ApplicationEventPublisher applicationEventPublisher) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.transferRepository = transferRepository;
         this.authenticatedUserService = authenticatedUserService;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     /**
@@ -102,22 +101,16 @@ public class TransactionService {
         // Create debit transaction (withdrawal from source)
         Transaction debitTransaction = new Transaction();
         debitTransaction.setTxnType("TRANSFER_OUT");
-        debitTransaction.setAccountId(fromAccount.getAccountId());
-        debitTransaction.setAmount(request.amount());
-        debitTransaction.setStatus("COMPLETED");
-        debitTransaction.setTxnDate(LocalDateTime.now());
-        debitTransaction.setDescription(request.description() != null ? request.description() : "Internal transfer");
-        Transaction savedDebitTxn = transactionRepository.save(debitTransaction);
+        Transaction savedDebitTxn = SetTransaction(request, fromAccount, debitTransaction);
+
+        PublishEvent(savedDebitTxn);
 
         // Create credit transaction (deposit to destination)
         Transaction creditTransaction = new Transaction();
         creditTransaction.setTxnType("TRANSFER_IN");
-        creditTransaction.setAccountId(toAccount.getAccountId());
-        creditTransaction.setAmount(request.amount());
-        creditTransaction.setStatus("COMPLETED");
-        creditTransaction.setTxnDate(LocalDateTime.now());
-        creditTransaction.setDescription(request.description() != null ? request.description() : "Internal transfer");
-        Transaction savedCreditTxn = transactionRepository.save(creditTransaction);
+        Transaction savedCreditTxn = SetTransaction(request, toAccount, creditTransaction);
+
+        PublishEvent(savedCreditTxn);
 
         // Update account balances
         fromAccount.setBalance(fromAccount.getBalance().subtract(request.amount()));
@@ -154,6 +147,20 @@ public class TransactionService {
         return new TransferResponse(transfer.getTransferId(), debitSummary, creditSummary, TransactionStatus.COMPLETE);
     }
 
+    private void PublishEvent(Transaction transaction) {
+        TransactionMessage msg = new TransactionMessage(transaction.getTxnType(), transaction.getAmount());
+        applicationEventPublisher.publishEvent(new TransactionCreatedEvent(this, msg));
+    }
+
+    private Transaction SetTransaction(TransferRequest request, Account toAccount, Transaction creditTransaction) {
+        creditTransaction.setAccountId(toAccount.getAccountId());
+        creditTransaction.setAmount(request.amount());
+        creditTransaction.setStatus("COMPLETED");
+        creditTransaction.setTxnDate(LocalDateTime.now());
+        creditTransaction.setDescription(request.description() != null ? request.description() : "Internal transfer");
+        return transactionRepository.save(creditTransaction);
+    }
+
     @Transactional
     public DepositResponse depositToAccount(DepositRequest request) {
         validatePositiveAmount(request.amount(), "amount");
@@ -168,6 +175,8 @@ public class TransactionService {
         accountRepository.save(account);
 
         Transaction savedDeposit = createAndSaveTransaction(account.getAccountId(), "DEPOSIT", request.amount(), "Deposit");
+
+        PublishEvent(savedDeposit);
         return new DepositResponse(
                 savedDeposit.getTxnId(),
                 account.getAccountNumber(),
@@ -194,6 +203,9 @@ public class TransactionService {
         accountRepository.save(account);
 
         Transaction savedWithdrawal = createAndSaveTransaction(account.getAccountId(), "WITHDRAWAL", request.amount(), "Withdrawal");
+
+        PublishEvent(savedWithdrawal);
+
         return new WithdrawalResponse(
                 savedWithdrawal.getTxnId(),
                 account.getAccountNumber(),
