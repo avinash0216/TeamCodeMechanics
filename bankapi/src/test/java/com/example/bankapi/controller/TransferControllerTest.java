@@ -46,7 +46,7 @@ class TransferControllerTest {
         TransactionSummary creditTxn = new TransactionSummary("C-1", "123456789013", new BigDecimal("25.00"), Instant.now(), "TRANSFER_IN", "COMPLETED");
         TransferResponse response = new TransferResponse("T-1", debitTxn, creditTxn, TransactionStatus.COMPLETE);
 
-        when(transactionService.transferBetweenAccountsSameCustomer(request)).thenReturn(response);
+        when(transactionService.transfer(request)).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/transfers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -58,7 +58,7 @@ class TransferControllerTest {
                 .andExpect(jsonPath("$.status").value("COMPLETE"));
 
         ArgumentCaptor<TransferRequest> captor = ArgumentCaptor.forClass(TransferRequest.class);
-        verify(transactionService).transferBetweenAccountsSameCustomer(captor.capture());
+        verify(transactionService).transfer(captor.capture());
         assertThat(captor.getValue().fromAccountNumber()).isEqualTo("123456789012");
         assertThat(captor.getValue().toAccountNumber()).isEqualTo("123456789013");
         assertThat(captor.getValue().amount()).isEqualByComparingTo("25.00");

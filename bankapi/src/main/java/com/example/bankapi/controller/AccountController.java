@@ -7,6 +7,7 @@ import com.example.bankapi.service.AuditService;
 import com.example.bankapi.service.DownstreamAccountService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -43,20 +44,11 @@ public class AccountController {
         return accountService.getAllAccounts();
     }
 
-    @GetMapping("/accounts?customerId={customerId}")
-    public List<Account> getAccountsByCustomer(@RequestParam Long customerId) {
-        if (!authenticatedUserService.hasRole("teller")
-                && !authenticatedUserService.getCurrentCustomerId().equals(customerId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Customers can only access their own accounts");
-        }
-        return accountService.getAccountsByCustomer(customerId);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Account> getByAccountId(@PathVariable String id) {
-        auditService.logEvent("READ_ACCOUNT",id);
-        return accountService.getAccountById(Long.valueOf(id))
+    @GetMapping("/{accountId}")
+    @PreAuthorize("hasRole('teller') or @authenticatedUserService.getCurrentCustomerId() == #accountId")
+    public ResponseEntity<Account> getByAccountId(@PathVariable String accountId) {
+        auditService.logEvent("READ_ACCOUNT",accountId);
+        return accountService.getAccountById(Long.valueOf(accountId))
                 .map(account -> {
                     if (!authenticatedUserService.hasRole("teller")
                             && !String.valueOf(authenticatedUserService.getCurrentCustomerId()).equals(account.customerId())) {

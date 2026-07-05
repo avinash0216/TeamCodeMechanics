@@ -1,4 +1,27 @@
 package com.example.bankapi.controller;
 
+import com.example.bankapi.model.PaymentRequest;
+import com.example.bankapi.service.PaymentService;
+import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/payments")
 public class PaymentController {
+
+    private final PaymentService paymentService;
+
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+
+    @PostMapping("/payments")
+    public ResponseEntity<JsonNode> submitPayment(@Valid @RequestBody PaymentRequest request) {
+        return paymentService.submitPayment(request);
+    }
 }

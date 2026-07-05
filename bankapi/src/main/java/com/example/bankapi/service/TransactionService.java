@@ -13,8 +13,11 @@ import com.example.bankapi.repository.AccountRepository;
 import com.example.bankapi.repository.TransactionRepository;
 import com.example.bankapi.repository.TransferRepository;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.UUID;
 
 import java.math.BigDecimal;
@@ -62,9 +65,8 @@ public class TransactionService {
      * @throws RuntimeException if transfer fails or no authentication found
      */
     @Transactional
-    public TransferResponse transferBetweenAccountsSameCustomer(TransferRequest request) {
+    public TransferResponse transfer (TransferRequest request) {
         boolean isTeller = isCurrentUserTeller();
-
         Long customerId = isTeller ? null : authenticatedUserService.getCurrentCustomerId();
 
         // Validate amount
@@ -73,14 +75,14 @@ public class TransactionService {
         }
 
         if (request.fromAccountNumber().equals(request.toAccountNumber())) {
-           throw new MalformedRequestException("INVALID_REQUEST", "Transfer cannot be to the same account");
+           throw new MalformedRequestException("INVALID_REQUEST", "Transfer cannot be to the same account number");
         }
 
         // Fetch and validate source account by account number
         Account fromAccount = accountRepository.findByAccountNumber(request.fromAccountNumber())
                .orElseThrow(() -> new AccountNotFoundException(request.fromAccountNumber()));
         if (!isTeller && !fromAccount.getCustomerId().equals(customerId)) {
-           throw new MalformedRequestException("UNAUTHORIZED", "Source account does not belong to this customer");
+           throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Source account does not belong to this customer");
         }
 
         // Fetch and validate destination account by account number
@@ -88,11 +90,12 @@ public class TransactionService {
                .orElseThrow(() -> new AccountNotFoundException( request.toAccountNumber()));
 
         if (!isTeller && !toAccount.getCustomerId().equals(customerId)) {
-           throw new MalformedRequestException("UNAUTHORIZED", "Destination account does not belong to this customer");
+           throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Destination account does not belong to this customer");
         }
         if (isTeller && !toAccount.getCustomerId().equals(fromAccount.getCustomerId())) {
-           throw new MalformedRequestException("INVALID_REQUEST", "Teller transfers must be between accounts owned by the same customer");
+           throw new BusinessRuleException("INVALID_OPERATION", "Teller transfers must be between accounts owned by the same customer");
         }
+
         validateAccountActive(toAccount);
 
         // Validate source account has sufficient balance

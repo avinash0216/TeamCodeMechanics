@@ -35,7 +35,7 @@ public class BankingApiClient {
 
     public PaymentResponse postPayment(PaymentRequest request) {
         return bankApiWebClient.post()
-                .uri("/api/v1/payments")
+                .uri("/api/v1/payments/payments")
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(PaymentResponse.class)

@@ -27,10 +27,9 @@ public class CustomerService {
      * @return customerId if found
      * @throws IllegalArgumentException if customer not found
      */
-    public Long resolveCustomerId(String customerNumber) {
+    public Optional<Long> resolveCustomerId(String customerNumber) {
         return customerRepository.findByCustomerNumber(customerNumber)
-                .map(Customer::getCustomerId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerNumber));
+                .map(Customer::getCustomerId);
     }
 
     /**

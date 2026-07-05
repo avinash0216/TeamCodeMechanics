@@ -4,6 +4,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +33,8 @@ public class AuthenticatedUserService {
     }
 
     public Long getCurrentCustomerId() {
-        return customerService.resolveCustomerId(getCurrentSubject());
+        return customerService.resolveCustomerId(getCurrentSubject())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Token not associated with a customer"));
     }
 
     public List<String> getCurrentRoles() {

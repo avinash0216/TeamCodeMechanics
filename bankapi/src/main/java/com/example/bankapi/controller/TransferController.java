@@ -20,7 +20,7 @@ public class TransferController {
 
     @PostMapping("/transfers")
     public ResponseEntity<TransferResponse> transfer(@Valid @RequestBody TransferRequest request) {
-        TransferResponse response = transactionService.transferBetweenAccountsSameCustomer(request);
+        TransferResponse response = transactionService.transfer(request);
         return ResponseEntity.created(URI.create("/api/v1/transactions/" + response.transferId())).body(response);
     }
 }

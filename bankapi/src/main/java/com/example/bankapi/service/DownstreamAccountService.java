@@ -1,6 +1,7 @@
 package com.example.bankapi.service;
 
 import com.example.bankapi.model.Account;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import java.util.List;
@@ -10,7 +11,7 @@ public class DownstreamAccountService {
 
     private final WebClient downstreamApiClient;
 
-    public DownstreamAccountService(WebClient downstreamApiClient) {
+    public DownstreamAccountService(@Qualifier("downstreamApiClient") WebClient downstreamApiClient) {
         this.downstreamApiClient = downstreamApiClient;
     }
 

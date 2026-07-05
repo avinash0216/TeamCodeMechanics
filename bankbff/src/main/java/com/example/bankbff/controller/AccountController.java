@@ -37,11 +37,9 @@ public class AccountController {
         return ResponseEntity.ok(resp);
     }
 
-
     @PostMapping("/payments")
     public ResponseEntity<ApiResponse<PaymentResponse>> SubmitPayment(@RequestBody PaymentRequest request) {
-        // Implement the logic to submit a payment
-        PaymentResponse response = new PaymentResponse("Payment submitted successfully", BigDecimal.valueOf(123456789L), "SUCCESS");
+        PaymentResponse response = bankingApiClient.postPayment(request);
         ApiResponse<PaymentResponse> resp = ApiResponse.success(HttpStatus.OK.toString(), "SUCCESS", "", response);
         return ResponseEntity.ok(resp);
     }

@@ -2,5 +2,5 @@ package com.example.bankbff.dto;
 
 import java.math.BigDecimal;
 
-public record PaymentRequest(String accountId, BigDecimal amount, String payee) {
+public record PaymentRequest(String accountNumber, BigDecimal amount, String payee) {
 }

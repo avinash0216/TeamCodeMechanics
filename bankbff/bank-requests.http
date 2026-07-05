@@ -36,7 +36,7 @@ Accept: application/json
 ### do not survive a restart.
 ###############################################################################
 
-@sessionCookie = BFF_SESSION=AD3ED18704F62625576C90EB27972AD0
+@sessionCookie = BFF_SESSION=1FDBF8FB102E3E1D52112B146A7A2A58
 
 
 ###############################################################################
@@ -107,3 +107,28 @@ Cookie: {{sessionCookie}}
 GET {{bff}}/api/me
 Accept: application/json
 Cookie: {{sessionCookie}}
+
+### /api/payments SUCCESS
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 450,
+  "payee": "Utility Company"
+}
+
+###/api/payments FAILURE
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 999.99,
+  "payee": "Utility Company"
+}
+

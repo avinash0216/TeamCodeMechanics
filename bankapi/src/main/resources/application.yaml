@@ -46,3 +46,7 @@ spring:
 logging:
   level:
     com.example.transproducer: INFO
+
+payment:
+  mock:
+    base-url: http://localhost:8090
