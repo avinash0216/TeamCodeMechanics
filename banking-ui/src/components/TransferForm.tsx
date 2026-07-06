@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { postTransfer } from '../api/client';
 import type { Account, TransferResponse } from '../api/types';
+import { toast } from 'react-toastify';
 
 type TransferFormProps = {
   accounts: Account[] | { data: Account[] } | null | undefined;
@@ -14,6 +15,7 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
+  const [normalizedResult, setNormalizedResult] = useState<Partial<TransferResponse> | null>(null);
 
   const accountOptions = Array.isArray(accounts)
     ? accounts
@@ -47,25 +49,24 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
         amount: amountNumber,
       });
 
-      const normalizedResult = result && typeof result === 'object' && 'data' in result
+      const normalized = result && typeof result === 'object' && 'data' in result
         ? (result as { data?: Partial<TransferResponse> }).data ?? result
         : result;
+      
+      setNormalizedResult(normalized);
 
-      if (normalizedResult?.status === 'FAILED') {
-        setMessage('Transfer failed. Check the accounts and that the source has sufficient funds.');
-        setMessageType('error');
+      if (normalized?.status === 'FAILED') {
+        toast.error('Transfer failed. Check the accounts and that the source has sufficient funds.');
       } else {
-        const transferId = normalizedResult?.transactionId || normalizedResult?.transferId;
-        setMessage(`Transfer complete. Transaction ID: ${transferId}`);
-        setMessageType('success');
+        const transferId = normalized?.transactionId || normalized?.transferId;
+        toast.success(`Transfer complete. Transaction ID: ${transferId}`);
         setFromAccount('');
         setToAccount('');
         setAmount('');
         onTransferComplete();
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Transfer failed.');
-      setMessageType('error');
+      toast.error(e instanceof Error ? e.message : 'Transfer failed.');
     } finally {
       setSubmitting(false);
     }
@@ -119,11 +120,7 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
         <button type="submit" disabled={submitting}>
           {submitting ? 'Processing...' : 'Submit Transfer'}
         </button>
-        {message && (
-          <p className={messageType === 'success' ? 'success-message' : 'error-message'}>
-            {message}
-          </p>
-        )}
+        {/* Toast messages now handled by react-toastify via toast() calls */}
       </form>
     </section>
   );

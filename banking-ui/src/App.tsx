@@ -17,6 +17,7 @@ import Withdrawal from './features/withdrawal';
 import { AccountsContext, TitleContext } from './components/common/TitleContext';
 import { useAuth } from './auth/AuthContext';
 import { SignInScreen } from './components/SignInScreen';
+import { ToastContainer } from 'react-toastify';
 
 export function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -146,6 +147,7 @@ export function App() {
               </>
             )}
           </main>
+          <ToastContainer autoClose={5000}/>
         </div>
       </AccountsContext.Provider>
     </TitleContext.Provider>
