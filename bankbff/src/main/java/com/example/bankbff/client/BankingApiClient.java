@@ -33,9 +33,10 @@ public class BankingApiClient {
                 .block();
     }
 
-    public PaymentResponse postPayment(PaymentRequest request) {
+    public PaymentResponse postPayment(PaymentRequest request, String idempotencyKey) {
         return bankApiWebClient.post()
                 .uri("/api/v1/payments/payments")
+                .header("Idempotency-Key", idempotencyKey)
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(PaymentResponse.class)

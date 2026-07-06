@@ -1,5 +1,6 @@
 package com.example.bankapi.service;
 
+import com.example.bankapi.exception.MalformedRequestException;
 import com.example.bankapi.model.PaymentRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -18,6 +19,8 @@ import java.time.Duration;
 @Service
 public class PaymentService {
 
+    private static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
+
     private final WebClient paymentMockWebClient;
 
     public PaymentService(@Qualifier("paymentMockWebClient") WebClient paymentMockWebClient) {
@@ -25,9 +28,13 @@ public class PaymentService {
     }
 
     @CircuitBreaker(name = "paymentApi", fallbackMethod = "paymentApiFallback")
-    public ResponseEntity<JsonNode> submitPayment(PaymentRequest request) {
+    public ResponseEntity<JsonNode> submitPayment(PaymentRequest request, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new MalformedRequestException("MISSING_FIELD", IDEMPOTENCY_KEY_HEADER, "Idempotency-Key header is required");
+        }
         return paymentMockWebClient.post()
                 .uri("/payments")
+                .header(IDEMPOTENCY_KEY_HEADER, idempotencyKey)
                 .bodyValue(request)
                 .retrieve()
                 .onStatus(status -> status.is5xxServerError(),
@@ -42,7 +49,7 @@ public class PaymentService {
                 .block();
     }
 
-    private ResponseEntity<JsonNode> paymentApiFallback(PaymentRequest request, Throwable ex) {
+    private ResponseEntity<JsonNode> paymentApiFallback(PaymentRequest request, String idempotencyKey, Throwable ex) {
         ObjectNode body = JsonNodeFactory.instance.objectNode();
         body.put("status", "UNAVAILABLE");
         body.put("errorCode", "PAYMENT_PROVIDER_UNAVAILABLE");

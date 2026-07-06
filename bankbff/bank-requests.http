@@ -36,7 +36,7 @@ Accept: application/json
 ### do not survive a restart.
 ###############################################################################
 
-@sessionCookie = BFF_SESSION=1FDBF8FB102E3E1D52112B146A7A2A58
+@sessionCookie = BFF_SESSION=B2B170CA8C50ACF1E43A37AA3604DEF3
 
 
 ###############################################################################
@@ -113,6 +113,7 @@ POST {{bff}}/api/payments
 Accept: application/json
 Cookie: {{sessionCookie}}
 Content-Type: application/json
+Idempotency-Key: payment-success-001
 
 {
   "accountNumber": "128-9878-001",
@@ -125,10 +126,10 @@ POST {{bff}}/api/payments
 Accept: application/json
 Cookie: {{sessionCookie}}
 Content-Type: application/json
+Idempotency-Key: payment-failure-001
 
 {
   "accountNumber": "128-9878-001",
   "amount": 999.99,
   "payee": "Utility Company"
 }
-

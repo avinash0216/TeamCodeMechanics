@@ -39,11 +39,13 @@ class PaymentServiceTest {
         );
 
         ResponseEntity<JsonNode> response = service.submitPayment(
-                new PaymentRequest("ACC-1", new BigDecimal("50.00"), "Utility")
+                new PaymentRequest("ACC-1", new BigDecimal("50.00"), "Utility"),
+                "idem-1001"
         );
 
         assertThat(requests).hasSize(1);
         assertThat(requests.get(0).url().getPath()).isEqualTo("/payments");
+        assertThat(requests.get(0).headers().getFirst("Idempotency-Key")).isEqualTo("idem-1001");
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("status").asText()).isEqualTo("ACCEPTED");
@@ -64,7 +66,8 @@ class PaymentServiceTest {
         );
 
         ResponseEntity<JsonNode> response = service.submitPayment(
-                new PaymentRequest("ACC-1", new BigDecimal("999.99"), "Utility")
+                new PaymentRequest("ACC-1", new BigDecimal("999.99"), "Utility"),
+                "idem-1002"
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
