@@ -3,7 +3,7 @@ import { postTransfer } from '../api/client';
 import type { Account } from '../api/types';
 
 type TransferFormProps = {
-  accounts: Account[];
+  accounts: Account[] | { data: Account[] } | null | undefined;
   onTransferComplete: () => void;
 };
 
@@ -14,6 +14,12 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
+
+  const accountOptions = Array.isArray(accounts)
+    ? accounts
+    : Array.isArray(accounts?.data)
+      ? accounts.data
+      : [];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,8 +42,8 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
     setSubmitting(true);
     try {
       const result = await postTransfer({
-        fromAccountId: fromAccount,
-        toAccountId: toAccount,
+        fromAccountNumber: fromAccount,
+        toAccountNumber: toAccount,
         amount: amountNumber,
       });
       if (result.status === 'FAILED') {
@@ -71,9 +77,9 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
             onChange={(e) => setFromAccount(e.target.value)}
           >
             <option value="">-- Select --</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.id} ({a.accountType}, ${a.balance.toFixed(2)})
+            {accountOptions.map((a) => (
+              <option key={a.accountNumber} value={a.accountNumber}>
+                {a.accountNumber} ({a.accountType}, ${a.balance.toFixed(2)})
               </option>
             ))}
           </select>
@@ -86,9 +92,9 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
             onChange={(e) => setToAccount(e.target.value)}
           >
             <option value="">-- Select --</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.id} ({a.accountType}, ${a.balance.toFixed(2)})
+            {accountOptions.map((a) => (
+              <option key={a.accountNumber} value={a.accountNumber}>
+                {a.accountNumber} ({a.accountType}, ${a.balance.toFixed(2)})
               </option>
             ))}
           </select>

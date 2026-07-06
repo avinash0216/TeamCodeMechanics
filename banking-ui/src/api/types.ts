@@ -8,17 +8,35 @@
  */
 
 export type AccountType = 'SAVINGS' | 'CHECKING';
+export type AccountStatus = 'ACTIVE' | 'INACTIVE';
 
 export type Account = {
-  id: string;
+  accountNumber: string;
   customerId: string;
   accountType: AccountType;
   balance: number;
+  status: AccountStatus;
 };
 
 export type TransferRequest = {
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountNumber: string;
+  toAccountNumber: string;
+  amount: number;
+};
+
+export type DepositRequest = {
+  toAccountNumber: string;
+  amount: number;
+};
+
+export type PaymentRequest = {
+  fromAccountNumber: string;
+  toCompany: string;
+  amount: number;
+};
+
+export type WithdrawalRequest = {
+  fromAccountNumber: string;
   amount: number;
 };
 

@@ -3,19 +3,65 @@ import { AccountsContext, TitleContext } from "../common/TitleContext";
 import { formatCurrency } from "../../utils/format";
 import { IPaymentFacilities } from "../../features/payment";
 import MatButton from "./MatButton";
+import { Account } from "../../api/types";
+import { postDeposit, postTransfer } from "../../api/client";
 
 export default function GeneralForm( { paymentComps, selectedValue, onChange, btnTitle, labelDescription }: { paymentComps?: IPaymentFacilities[]; selectedValue?: number; onChange?: (value: IPaymentFacilities | null) => void; btnTitle?: string; labelDescription?: string; }) {
     const title = useContext(TitleContext);
     const accounts = useContext(AccountsContext);
-    const activeAccounts = accounts?.filter((a) => a.status === 'ACTIVE');
+    
+    // Check if accounts has a data property and convert it, otherwise use as array
+    const accountList: Account[] = Array.isArray(accounts)
+      ? accounts
+      : accounts && typeof accounts === 'object' && 'data' in accounts && Array.isArray((accounts as Record<string, unknown>).data)
+        ? (accounts as Record<string, unknown>).data as Account[]
+        : [];
+    
+    const activeAccounts = accountList.filter((a: Account) => a.status === 'ACTIVE');
     const [fromAccount, setFromAccount] = useState<string>('');
+    const [toAccount, setToAccount] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const[messageType, setMessageType] = useState<'success' | 'error' | null>(null);
   
   
   
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    throw new Error("Function not implemented.");
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    const selectedAccount = accountList.find(a => a.accountNumber === fromAccount);
+    const amountNumber = parseFloat(amount);
+  
+    // Validation
+    if (!fromAccount || !amountNumber || amountNumber <= 0) {
+     console.error('Invalid input');
+     return;
+   }
+    // Use the values
+    console.log({ btnTitle, selectedAccount, amount: amountNumber });
+    // Call your API or update state here
+    try {
+          const result = await postDeposit({
+            toAccountNumber: toAccount,
+            amount: amountNumber,
+          });
+          if (result.status === 'FAILED') {
+            setMessage('Deposit failed. Check the account and/or the amount.');
+            setMessageType('error');
+          } else {
+            setMessage(`Deposit complete. Transaction ID: ${result.transactionId}`);
+            setMessageType('success');
+            setFromAccount('');
+            setToAccount('');
+            setAmount('');
+            //onTransferComplete();
+          }
+        } catch (e) {
+          setMessage(e instanceof Error ? e.message : 'Deposit failed.');
+          setMessageType('error');
+        } finally {
+          setSubmitting(false);
+        }
   }
 
    return (
@@ -37,9 +83,9 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
                       required
                     >
             <option value="">-- Select an account --</option>
-            {accounts?.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.id} ({a.accountType}, ${a.balance.toFixed(2)})
+            {accountList.map((a: Account) => (
+              <option key={a.accountNumber} value={a.accountNumber}>
+                {a.accountNumber} ({a.accountType}, ${a.balance.toFixed(2)})
               </option>
             ))}
           </select>

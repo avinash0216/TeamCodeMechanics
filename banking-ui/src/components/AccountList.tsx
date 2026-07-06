@@ -1,12 +1,18 @@
 import type { Account } from '../api/types';
 
 type AccountListProps = {
-  accounts: Account[];
+  accounts: Account[] | { data: Account[] } | null | undefined;
   loading: boolean;
   error: string | null;
 };
 
 export function AccountList({ accounts, loading, error }: AccountListProps) {
+  const accountItems = Array.isArray(accounts)
+    ? accounts
+    : Array.isArray(accounts?.data)
+      ? accounts.data
+      : [];
+
   if (loading) {
     return <p className="status-message">Loading accounts...</p>;
   }
@@ -15,7 +21,7 @@ export function AccountList({ accounts, loading, error }: AccountListProps) {
     return <p className="error-message">Error loading accounts: {error}</p>;
   }
 
-  if (accounts.length === 0) {
+  if (accountItems.length === 0) {
     return <p className="status-message">No accounts found.</p>;
   }
 
@@ -31,9 +37,9 @@ export function AccountList({ accounts, loading, error }: AccountListProps) {
           </tr>
         </thead>
         <tbody>
-          {accounts.map((account) => (
-            <tr key={account.id}>
-              <td>{account.id}</td>
+          {accountItems.map((account) => (
+            <tr key={account.accountNumber}>
+              <td>{account.accountNumber}</td>
               <td>{account.accountType}</td>
               <td>${account.balance.toFixed(2)}</td>
             </tr>
