@@ -31,7 +31,7 @@ export function Header() {
         </div>
         {user && (
           <div className="header-user">
-            <span className="user-name">Hello, {user.preferredUsername}</span>
+            <span className="user-name">Hello, {user.fullName}</span>
             <button type="button" onClick={handleSignOut} className="sign-out-button">
               Sign out
             </button>

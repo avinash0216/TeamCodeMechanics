@@ -3,6 +3,7 @@ import { AccountsContext, TitleContext } from "../common/TitleContext";
 import { IPaymentFacilities } from "../../features/payment";
 import { Account, GenericResponse } from "../../api/types";
 import { postDeposit, postPayment, postWithdrawal } from "../../api/client";
+import { toast } from 'react-toastify';
 
 export default function GeneralForm( { paymentComps, selectedValue, onChange, btnTitle, labelDescription, onActionComplete }: { paymentComps?: IPaymentFacilities[]; selectedValue?: number; onChange?: (value: IPaymentFacilities | null) => void; btnTitle?: string; labelDescription?: string; onActionComplete: () => void; }) {
     const title = useContext(TitleContext);
@@ -37,7 +38,8 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
   
     // Validation
     if (!fromAccount || !amountNumber || amountNumber <= 0) {
-     console.error('Invalid input');
+     //console.error('Invalid input');
+     toast.error('Invalid input. Please ensure all fields are filled correctly.');
      return;
    }
     // Use the values
@@ -76,10 +78,12 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
                   : result;
 
           if (result?.status === 'FAILED') {
+            toast.error(`${btnTitle} failed. Check the account and/or the amount.`);
             setMessage(`${btnTitle} failed. Check the account and/or the amount.`);
             setMessageType('error');
           } else {
             const transactionIdId = normalizedResult?.transactionId
+            toast.success(`${btnTitle} complete. Transaction ID: ${transactionIdId}`);
             setMessage(`${btnTitle} complete. Transaction ID: ${transactionIdId}`);
             setMessageType('success');
             setFromAccount('');
@@ -88,7 +92,7 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
             onActionComplete();
           }
         } catch (e) {
-          setMessage(e instanceof Error ? e.message : `${btnTitle} failed.`);
+          toast.error(e instanceof Error ? e.message : `${btnTitle} failed.`);
           setMessageType('error');
         } finally {
           setSubmitting(false);
@@ -181,11 +185,11 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
   
     )
     } */}
-    {message && (
+    {/* {message && (
           <p className={messageType === 'success' ? 'success-message' : 'error-message'}>
             {message}
           </p>
-        )}
+        )} */}
       </form>
     </section>
   );
