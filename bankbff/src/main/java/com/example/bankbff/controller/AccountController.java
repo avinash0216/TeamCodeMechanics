@@ -7,11 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -38,8 +41,12 @@ public class AccountController {
     }
 
     @PostMapping("/payments")
-    public ResponseEntity<ApiResponse<PaymentResponse>> SubmitPayment(@RequestBody PaymentRequest request) {
-        PaymentResponse response = bankingApiClient.postPayment(request);
+    public ResponseEntity<ApiResponse<PaymentResponse>> SubmitPayment(
+            @RequestBody PaymentRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
+    ) {
+        String effectiveIdempotencyKey = StringUtils.hasText(idempotencyKey) ? idempotencyKey : UUID.randomUUID().toString();
+        PaymentResponse response = bankingApiClient.postPayment(request, effectiveIdempotencyKey);
         ApiResponse<PaymentResponse> resp = ApiResponse.success(HttpStatus.OK.toString(), "SUCCESS", "", response);
         return ResponseEntity.ok(resp);
     }

@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.http.MediaType;
@@ -41,15 +42,16 @@ class PaymentControllerTest {
         PaymentRequest request = new PaymentRequest("ACC-1", new BigDecimal("50.00"), "Utility");
         JsonNode response = objectMapper.readTree("{\"status\":\"ACCEPTED\",\"confirmation\":\"PMT-1001\"}");
 
-        when(paymentService.submitPayment(any(PaymentRequest.class)))
+        when(paymentService.submitPayment(any(PaymentRequest.class), anyString()))
                 .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body(response));
 
         mockMvc.perform(post("/api/v1/payments")
+                        .header("Idempotency-Key", "idem-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                         .andExpect(status().isCreated())
                         .andExpect(jsonPath("$.status").value("ACCEPTED"));
 
-        verify(paymentService).submitPayment(any(PaymentRequest.class));
+        verify(paymentService).submitPayment(any(PaymentRequest.class), anyString());
     }
 }

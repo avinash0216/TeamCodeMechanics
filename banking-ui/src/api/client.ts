@@ -90,11 +90,13 @@ export async function postWithdrawal(
 export async function postPayment(
   request: PaymentRequest
 ): Promise<TransferResponse> {
+  const idempotencyKey = generateIdempotencyKey();
   const response = await fetch('/api/payments', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
     },
     body: JSON.stringify(request),
   });
@@ -103,6 +105,13 @@ export async function postPayment(
     throw new Error(message || `Payment failed: ${response.status}`);
   }
   return response.json();
+}
+
+function generateIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `payment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export async function logout(): Promise<void> {
