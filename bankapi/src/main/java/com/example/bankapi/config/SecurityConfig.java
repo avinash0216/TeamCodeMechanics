@@ -29,13 +29,10 @@ public class SecurityConfig {
                 // Can't configure mvcMatchers after anyRequest
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/health/*").permitAll()
-                        .requestMatchers(HttpMethod.GET,"/api/v1/accounts/**").permitAll()
-                        .requestMatchers(HttpMethod.POST,"/api/v1/deposits/**").permitAll()
-                        .requestMatchers(HttpMethod.POST,"/api/v1/payments/**").permitAll()
                         //.requestMatchers(HttpMethod.GET,"/api/v1/accounts/**").hasAuthority("SCOPE_account.read")
                         //.requestMatchers(HttpMethod.POST,"/api/v1/accounts").hasAuthority("SCOPE_account.create")
                         //.requestMatchers(HttpMethod.POST, "/api/v1/transfers").hasAuthority("SCOPE_transaction.create")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/transfers").permitAll()
+                        //.requestMatchers(HttpMethod.POST, "/api/v1/transfers").permitAll()
                         .anyRequest().authenticated()
                 )
 
