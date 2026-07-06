@@ -18,6 +18,7 @@ import { AccountsContext, TitleContext } from './components/common/TitleContext'
 import { useAuth } from './auth/AuthContext';
 import { SignInScreen } from './components/SignInScreen';
 import { ToastContainer } from 'react-toastify';
+import Transactions from './features/transactions';
 
 export function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -48,7 +49,53 @@ export function App() {
     { id: 2, title: 'Payment', icon: <PaymentIcon /> },
     { id: 3, title: 'Deposit', icon: <AccountBalanceIcon /> },
     { id: 4, title: 'Withdrawal', icon: <RemoveCircleIcon /> },
+    { id: 5, title: 'Transactions', icon: <AccountBalanceIcon /> },
   ];
+
+  const allTransactions: ITransactionProps[] = [
+    {
+      txnId: 'TXN001',
+      accountId: 'ACC001',
+      transactionType: 'Transfer',
+      Amount: 100.00,
+      status: 'Completed',
+      description: 'Transfer to savings account',
+      customerId: 'Alice Eke',
+      date: '2023-01-01'
+    },
+    {
+      txnId: 'TXN002',
+      accountId: 'ACC002',
+      transactionType: 'Payment',
+      Amount: 50.00,
+      status: 'Pending',
+      description: 'Payment to vendor',
+      customerId: 'Bob Johnson',
+      date: '2023-01-02'
+    },
+    {
+      txnId: 'TXN003',
+      accountId: 'ACC003',
+      transactionType: 'Deposit',
+      Amount: 200.00,
+      status: 'Completed',
+      description: 'Deposit to checking account',
+      customerId: 'Charlie Brown',
+      date: '2023-01-03'
+    },
+    {
+      txnId: 'TXN004',
+      accountId: 'ACC004',
+      transactionType: 'Withdrawal',
+      Amount: 75.00,
+      status: 'Completed',
+      description: 'Withdrawal from checking account',
+      customerId: 'Teller1',
+      date: '2023-01-04'
+    }
+  ];
+
+  const [transactions] = useState<ITransactionProps[]>(allTransactions);
 
   // Filter options based on user role
   const isAccountHolder = user?.roles?.includes('account_holder');
@@ -136,6 +183,12 @@ export function App() {
             <Withdrawal onActionComplete={loadAccounts} />
           </div>
         )}
+        {show === 'Transactions' && (
+          <div className="payment-form">
+            {/* Payment form component will go here */}
+            <Transactions transactions={transactions} />
+          </div>
+        )}
                 {/* <div className="button-row">
                   {transactionOptions.map((title) => (
                     <div className="button-item" key={title.id}>
@@ -164,4 +217,16 @@ export interface ITransactionOptions {
   id: number;
   title: string;
   icon?: React.ReactNode;
+}
+
+export interface ITransactionProps {
+  txnId: string;
+  accountId: string;
+  transactionType: string;
+  Amount: number;
+  status: string;
+  description: string;
+  customerId: string;
+  date: string;
+
 }
