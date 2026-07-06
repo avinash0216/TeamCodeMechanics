@@ -70,13 +70,9 @@ export async function postDeposit(
 }
 
 export async function logout(): Promise<void> {
-  const response = await fetch('/logout', {
-    method: 'POST',
-    headers: { Accept: 'application/json' },
-  });
-  if (!response.ok && response.status !== 302) {
-    throw new Error(`Logout failed: ${response.status}`);
-  }
+  // Use a top-level browser navigation so the full OIDC RP-initiated logout
+  // redirect chain executes with browser cookies at each hop.
+  window.location.assign('/logout');
 }
 
 async function safeReadErrorMessage(response: Response): Promise<string | null> {
