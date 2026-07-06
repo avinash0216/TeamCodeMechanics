@@ -50,6 +50,12 @@ export function App() {
     { id: 4, title: 'Withdrawal', icon: <RemoveCircleIcon /> },
   ];
 
+  // Filter options based on user role
+  const isAccountHolder = user?.roles?.includes('account_holder');
+  const availableOptions = isAccountHolder
+    ? transactionOptions.filter(opt => opt.title === 'Transfer' || opt.title === 'Payment')
+    : transactionOptions;
+
   const [show, setShow] = useState<string | null>(null);
   const [theTitle, setTheTitle] = useState<string | null>(null);
 
@@ -90,7 +96,7 @@ export function App() {
                   error={error}
                 />
                 <div className="button-row">
-                  {transactionOptions.map((title) => (
+                  {availableOptions.map((title) => (
                     <div className="button-item" key={title.id}>
                       <MatButton
                         title={title.title}
@@ -103,13 +109,13 @@ export function App() {
                     </div>
                   ))}
                 </div>
-                {show === 'Transfer' && (
+                {show === 'Transfer' && isAccountHolder && (
           <TransferForm
             accounts={accounts}
             onTransferComplete={loadAccounts}
           />
         )}
-        {show === 'Payment' && (
+        {show === 'Payment' && isAccountHolder && (
           <div className="payment-form">
             {/* Payment form component will go here */}
             <Payment 
