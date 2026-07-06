@@ -6,7 +6,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -16,14 +15,25 @@ public class UserController {
 
     @GetMapping("/api/me")
     public UserInfo me(@AuthenticationPrincipal OidcUser principal) {
+        String preferredUsername = principal.getPreferredUsername();
+        String fullName = principal.getFullName();
+        if (preferredUsername == null || preferredUsername.isBlank()) {
+            preferredUsername = fullName;
+        }
+        if (preferredUsername == null || preferredUsername.isBlank()) {
+            preferredUsername = principal.getSubject();
+        }
+        if (fullName == null || fullName.isBlank()) {
+            fullName = preferredUsername;
+        }
         List<String> roles = principal.getClaimAsStringList("roles");
         if (roles == null) {
             roles = List.of();
         }
         return new UserInfo(
                 principal.getSubject(),
-                principal.getPreferredUsername(),
-                principal.getFullName(),
+                preferredUsername,
+                fullName,
                 roles);
     }
     @GetMapping(value = "/logged-out", produces = MediaType.TEXT_HTML_VALUE)
