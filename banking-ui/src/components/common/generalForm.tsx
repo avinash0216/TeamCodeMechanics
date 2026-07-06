@@ -1,12 +1,10 @@
 import { FormEvent, useContext, useState } from "react";
 import { AccountsContext, TitleContext } from "../common/TitleContext";
-import { formatCurrency } from "../../utils/format";
 import { IPaymentFacilities } from "../../features/payment";
-import MatButton from "./MatButton";
-import { Account } from "../../api/types";
-import { postDeposit, postTransfer } from "../../api/client";
+import { Account, GenericResponse } from "../../api/types";
+import { postDeposit, postPayment, postWithdrawal } from "../../api/client";
 
-export default function GeneralForm( { paymentComps, selectedValue, onChange, btnTitle, labelDescription }: { paymentComps?: IPaymentFacilities[]; selectedValue?: number; onChange?: (value: IPaymentFacilities | null) => void; btnTitle?: string; labelDescription?: string; }) {
+export default function GeneralForm( { paymentComps, selectedValue, onChange, btnTitle, labelDescription, onActionComplete }: { paymentComps?: IPaymentFacilities[]; selectedValue?: number; onChange?: (value: IPaymentFacilities | null) => void; btnTitle?: string; labelDescription?: string; onActionComplete: () => void; }) {
     const title = useContext(TitleContext);
     const accounts = useContext(AccountsContext);
     
@@ -17,9 +15,8 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
         ? (accounts as Record<string, unknown>).data as Account[]
         : [];
     
-    const activeAccounts = accountList.filter((a: Account) => a.status === 'ACTIVE');
     const [fromAccount, setFromAccount] = useState<string>('');
-    const [toAccount, setToAccount] = useState<string>('');
+    const [, setToAccount] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -27,6 +24,12 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
   
   
   
+  function handlePaymentChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    const selectedId = parseInt(event.target.value);
+    const selectedComp = paymentComps?.find((comp) => comp.id === selectedId) || null;
+    onChange?.(selectedComp);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const selectedAccount = accountList.find(a => a.accountNumber === fromAccount);
@@ -38,26 +41,54 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
      return;
    }
     // Use the values
-    console.log({ btnTitle, selectedAccount, amount: amountNumber });
+    //console.log({ btnTitle, selectedAccount, amount: amountNumber });
     // Call your API or update state here
     try {
-          const result = await postDeposit({
-            toAccountNumber: toAccount,
-            amount: amountNumber,
-          });
-          if (result.status === 'FAILED') {
-            setMessage('Deposit failed. Check the account and/or the amount.');
+          let result: GenericResponse | undefined;
+          const selectedCompanyName = btnTitle === 'Submit Payment'
+            ? paymentComps?.find((comp) => comp.id === selectedValue)?.name || ''
+            : '';
+          
+          if(btnTitle === 'Deposit') {
+            result = await postDeposit({
+              accountNumber: selectedAccount?.accountNumber || '',
+              amount: amountNumber,
+            });
+          }
+          else if(btnTitle === 'Withdraw') {
+              result = await postWithdrawal({
+                accountNumber: selectedAccount?.accountNumber || '',
+                amount: amountNumber, // Placeholder for withdrawal
+              });
+          }
+          else if(btnTitle === 'Submit Payment') {
+            result = await postPayment({
+              accountNumber: selectedAccount?.accountNumber || '',
+              payee: selectedCompanyName,
+              amount: amountNumber,
+            });
+          }
+
+          
+
+          const normalizedResult = result && typeof result === 'object' && 'data' in result
+                  ? (result as { data?: Partial<GenericResponse> }).data ?? result
+                  : result;
+
+          if (result?.status === 'FAILED') {
+            setMessage(`${btnTitle} failed. Check the account and/or the amount.`);
             setMessageType('error');
           } else {
-            setMessage(`Deposit complete. Transaction ID: ${result.transactionId}`);
+            const transactionIdId = normalizedResult?.transactionId
+            setMessage(`${btnTitle} complete. Transaction ID: ${transactionIdId}`);
             setMessageType('success');
             setFromAccount('');
             setToAccount('');
             setAmount('');
-            //onTransferComplete();
+            onActionComplete();
           }
         } catch (e) {
-          setMessage(e instanceof Error ? e.message : 'Deposit failed.');
+          setMessage(e instanceof Error ? e.message : `${btnTitle} failed.`);
           setMessageType('error');
         } finally {
           setSubmitting(false);
@@ -102,11 +133,7 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
                         <select
                       id="fromAccount"
                       value={selectedValue}
-                      onChange={(e) => {
-                        const selectedId = parseInt(e.target.value);
-                        const selectedComp = paymentComps?.find((comp) => comp.id === selectedId) || null;
-                        onChange?.(selectedComp);
-                      }}
+                      onChange={handlePaymentChange}
                       required
                     >
             <option value="">-- Select a company --</option>
@@ -154,6 +181,11 @@ export default function GeneralForm( { paymentComps, selectedValue, onChange, bt
   
     )
     } */}
+    {message && (
+          <p className={messageType === 'success' ? 'success-message' : 'error-message'}>
+            {message}
+          </p>
+        )}
       </form>
     </section>
   );

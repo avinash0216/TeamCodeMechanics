@@ -113,19 +113,20 @@ export function App() {
             {/* Payment form component will go here */}
             <Payment 
                 title={theTitle}
-                accounts={accounts} />
+                accounts={accounts}
+                onActionComplete={loadAccounts} />
           </div>
         )}
         {show === 'Deposit' && (
           <div className="payment-form">
             {/* Payment form component will go here */}
-            <Deposit />
+            <Deposit  onActionComplete={loadAccounts} />
           </div>
         )}
         {show === 'Withdrawal' && (
           <div className="payment-form">
             {/* Payment form component will go here */}
-            <Withdrawal />
+            <Withdrawal onActionComplete={loadAccounts} />
           </div>
         )}
                 {/* <div className="button-row">

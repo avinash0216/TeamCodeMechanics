@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { postTransfer } from '../api/client';
-import type { Account } from '../api/types';
+import type { Account, TransferResponse } from '../api/types';
 
 type TransferFormProps = {
   accounts: Account[] | { data: Account[] } | null | undefined;
@@ -46,11 +46,17 @@ export function TransferForm({ accounts, onTransferComplete }: TransferFormProps
         toAccountNumber: toAccount,
         amount: amountNumber,
       });
-      if (result.status === 'FAILED') {
+
+      const normalizedResult = result && typeof result === 'object' && 'data' in result
+        ? (result as { data?: Partial<TransferResponse> }).data ?? result
+        : result;
+
+      if (normalizedResult?.status === 'FAILED') {
         setMessage('Transfer failed. Check the accounts and that the source has sufficient funds.');
         setMessageType('error');
       } else {
-        setMessage(`Transfer complete. Transaction ID: ${result.transactionId}`);
+        const transferId = normalizedResult?.transactionId || normalizedResult?.transferId;
+        setMessage(`Transfer complete. Transaction ID: ${transferId}`);
         setMessageType('success');
         setFromAccount('');
         setToAccount('');

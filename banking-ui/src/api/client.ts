@@ -8,7 +8,7 @@
  * shapes match the types in types.ts directly, so there is no translation layer.
  */
 
-import type { Account, DepositRequest, TransferRequest, TransferResponse, User } from './types';
+import type { Account, DepositRequest, PaymentRequest, TransferRequest, TransferResponse, User } from './types';
 
 export async function getCurrentUser(): Promise<User | null> {
   const response = await fetch('/api/me', {
@@ -64,7 +64,43 @@ export async function postDeposit(
   });
   if (!response.ok) {
     const message = await safeReadErrorMessage(response);
-    throw new Error(message || `Transfer failed: ${response.status}`);
+    throw new Error(message || `Deposit failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function postWithdrawal(
+  request: DepositRequest
+): Promise<TransferResponse> {
+  const response = await fetch('/api/withdrawals', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    const message = await safeReadErrorMessage(response);
+    throw new Error(message || `Withdrawal failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function postPayment(
+  request: PaymentRequest
+): Promise<TransferResponse> {
+  const response = await fetch('/api/payments', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    const message = await safeReadErrorMessage(response);
+    throw new Error(message || `Payment failed: ${response.status}`);
   }
   return response.json();
 }

@@ -25,13 +25,13 @@ export type TransferRequest = {
 };
 
 export type DepositRequest = {
-  toAccountNumber: string;
+  accountNumber: string;
   amount: number;
 };
 
 export type PaymentRequest = {
-  fromAccountNumber: string;
-  toCompany: string;
+  accountNumber: string;
+  payee: string;
   amount: number;
 };
 
@@ -41,6 +41,17 @@ export type WithdrawalRequest = {
 };
 
 export type TransferResponse = {
+  transactionId: string;
+  status: 'COMPLETE' | 'FAILED';
+  transferId?: string; // Optional transfer ID for idempotency
+};
+
+// export type DepositResponse = {
+//   transactionId: string;
+//   status: 'COMPLETE' | 'FAILED';
+// };
+
+export type GenericResponse = {
   transactionId: string;
   status: 'COMPLETE' | 'FAILED';
 };
