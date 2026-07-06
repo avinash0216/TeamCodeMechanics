@@ -29,7 +29,7 @@ public class SecurityConfig {
                                                   WebClient.Builder webClientBuilder) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/oauth2/**", "/login/**", "/signed-out").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/**", "/logged-out").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated())
 
@@ -58,7 +58,7 @@ public class SecurityConfig {
                     OidcClientInitiatedLogoutSuccessHandler oidcLogoutHandler =
                             new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
                     // After IdP logout, send the user to a public signed-out page.
-                    oidcLogoutHandler.setPostLogoutRedirectUri("{baseUrl}/signed-out");
+                    oidcLogoutHandler.setPostLogoutRedirectUri("{baseUrl}/logged-out");
 
                     logout
                             .logoutUrl("/logout")

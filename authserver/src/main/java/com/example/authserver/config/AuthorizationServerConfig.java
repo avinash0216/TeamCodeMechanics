@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
@@ -109,17 +110,25 @@ public class AuthorizationServerConfig {
 
         BankUser alice = new BankUser(
                 "487-978493", "487-978493", encoder.encode("password"),
-                "account_holder", "Alice Customer", ACCOUNT_HOLDER_SCOPES);
+                "account_holder", "Alice Eke", ACCOUNT_HOLDER_SCOPES);
 
         BankUser bob = new BankUser(
                 "500-100200", "500-100200", encoder.encode("password"),
-                "account_holder", "Bob Customer", ACCOUNT_HOLDER_SCOPES);
+                "account_holder", "Bob Banala", ACCOUNT_HOLDER_SCOPES);
+
+        BankUser chris = new BankUser(
+                "442-100650", "442-100650", encoder.encode("password"),
+                "account_holder", "Chris Malik", ACCOUNT_HOLDER_SCOPES);
+
+        BankUser doug = new BankUser(
+                "980-104100", "104100-104100", encoder.encode("password"),
+                "account_holder", "Doug Frenzel", ACCOUNT_HOLDER_SCOPES);
 
         BankUser teller1 = new BankUser(
                 "teller1", "teller1", encoder.encode("password"),
                 "teller", "Teller One", TELLER_SCOPES);
 
-        Map<String, BankUser> users = Stream.of(alice, bob, teller1)
+        Map<String, BankUser> users = Stream.of(alice, bob, chris, doug, teller1)
                 .collect(Collectors.toMap(BankUser::getUsername, u -> u));
 
         // Return the BankUser unchanged. Do NOT use InMemoryUserDetailsManager:
@@ -151,12 +160,9 @@ public class AuthorizationServerConfig {
                 .redirectUri("http://localhost:5173/login/oauth2/code/bank-auth")
                 // Post-logout redirect URI (Lab 4.8). Must match the BFF's
                 // setPostLogoutRedirectUri(...) character for character.
-                .postLogoutRedirectUri("http://localhost:5173/")
-                // Allow post-logout return to the BFF's signed-out page as well as
-                // the dev UI. The OIDC RP-initiated logout handler will request
-                // one of these URLs; the IdP must accept it (exact match).
-                .postLogoutRedirectUri("http://localhost:8080/signed-out")
-                .postLogoutRedirectUri("http://localhost:5173/signed-out")
+                // Allow post-logout return to the dev UI. The OIDC RP-initiated logout handler will request
+                // this URL; the IdP must accept it (exact match).
+                .postLogoutRedirectUri("http://localhost:5173/logged-out")
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
                 .scope("account.read")
@@ -179,13 +185,15 @@ public class AuthorizationServerConfig {
     }
 
     // ===== Token customizer =====
-    // For user-bearing access tokens: set sub to the domain id, add the OIDC
+    // For user-bearing access/id tokens: set sub to the domain id, add the OIDC
     // display claims, add a roles claim, and narrow scope to (authorized intersect
     // allowed) while always keeping openid and profile.
     @Bean
     public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
         return context -> {
-            if (!OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+            boolean accessToken = OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType());
+            boolean idToken = OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue());
+            if (!accessToken && !idToken) {
                 return;
             }
             Authentication principal = context.getPrincipal();
@@ -196,12 +204,14 @@ public class AuthorizationServerConfig {
                 context.getClaims().claim("name", user.getFullName());
                 context.getClaims().claim("roles", List.of(user.getRole()));
 
-                Set<String> granted = context.getAuthorizedScopes().stream()
-                        .filter(s -> user.getAllowedScopes().contains(s)
-                                || OidcScopes.OPENID.equals(s)
-                                || OidcScopes.PROFILE.equals(s))
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                context.getClaims().claim("scope", String.join(" ", granted));
+                if (accessToken) {
+                    Set<String> granted = context.getAuthorizedScopes().stream()
+                            .filter(s -> user.getAllowedScopes().contains(s)
+                                    || OidcScopes.OPENID.equals(s)
+                                    || OidcScopes.PROFILE.equals(s))
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    context.getClaims().claim("scope", String.join(" ", granted));
+                }
             }
         };
     }
