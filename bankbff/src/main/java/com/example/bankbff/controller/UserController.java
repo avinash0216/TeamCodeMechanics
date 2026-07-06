@@ -15,15 +15,13 @@ public class UserController {
 
     @GetMapping("/api/me")
     public UserInfo me(@AuthenticationPrincipal OidcUser principal) {
-        String preferredUsername = principal.getPreferredUsername();
+        String subject = principal.getSubject();
         String fullName = principal.getFullName();
-        if (preferredUsername == null || preferredUsername.isBlank()) {
-            preferredUsername = fullName;
+        String preferredUsername = principal.getPreferredUsername();
+        if (isBlank(preferredUsername)) {
+            preferredUsername = isBlank(fullName) ? subject : fullName;
         }
-        if (preferredUsername == null || preferredUsername.isBlank()) {
-            preferredUsername = principal.getSubject();
-        }
-        if (fullName == null || fullName.isBlank()) {
+        if (isBlank(fullName)) {
             fullName = preferredUsername;
         }
         List<String> roles = principal.getClaimAsStringList("roles");
@@ -31,11 +29,16 @@ public class UserController {
             roles = List.of();
         }
         return new UserInfo(
-                principal.getSubject(),
+                subject,
                 preferredUsername,
                 fullName,
                 roles);
     }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
     @GetMapping(value = "/logged-out", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> loggedOut() {
         String html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Signed out</title></head><body>"

@@ -110,17 +110,25 @@ public class AuthorizationServerConfig {
 
         BankUser alice = new BankUser(
                 "487-978493", "487-978493", encoder.encode("password"),
-                "account_holder", "Alice Customer", ACCOUNT_HOLDER_SCOPES);
+                "account_holder", "Alice Eke", ACCOUNT_HOLDER_SCOPES);
 
         BankUser bob = new BankUser(
                 "500-100200", "500-100200", encoder.encode("password"),
-                "account_holder", "Bob Customer", ACCOUNT_HOLDER_SCOPES);
+                "account_holder", "Bob Banala", ACCOUNT_HOLDER_SCOPES);
+
+        BankUser chris = new BankUser(
+                "442-100650", "442-100650", encoder.encode("password"),
+                "account_holder", "Chris Malik", ACCOUNT_HOLDER_SCOPES);
+
+        BankUser doug = new BankUser(
+                "980-104100", "104100-104100", encoder.encode("password"),
+                "account_holder", "Doug Frenzel", ACCOUNT_HOLDER_SCOPES);
 
         BankUser teller1 = new BankUser(
                 "teller1", "teller1", encoder.encode("password"),
                 "teller", "Teller One", TELLER_SCOPES);
 
-        Map<String, BankUser> users = Stream.of(alice, bob, teller1)
+        Map<String, BankUser> users = Stream.of(alice, bob, chris, doug, teller1)
                 .collect(Collectors.toMap(BankUser::getUsername, u -> u));
 
         // Return the BankUser unchanged. Do NOT use InMemoryUserDetailsManager:
