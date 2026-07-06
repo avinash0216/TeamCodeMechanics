@@ -1,14 +1,14 @@
 import GeneralForm from "../components/common/generalForm";
 
 
-export default function Withdrawal() {
+export default function Withdrawal({ onActionComplete }: { onActionComplete?: () => void }) {
 
   const btnTitle = 'Withdraw';
   const labelDescription = 'From Account';
 
   return (
           <div className="withdrawal-form">
-            <GeneralForm btnTitle={btnTitle} labelDescription={labelDescription} />
+            <GeneralForm btnTitle={btnTitle} labelDescription={labelDescription} onActionComplete={onActionComplete ?? (() => {})} />
           </div>
         );
   

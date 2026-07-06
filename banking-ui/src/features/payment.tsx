@@ -3,7 +3,7 @@ import GeneralForm from "../components/common/generalForm";
 import { TitleContext } from "../components/common/TitleContext";
 import { Account } from "../api/types";
 
-export default function Payment({ title, accounts }: { title: string | null; accounts: Account[] }) {
+export default function Payment({ title, accounts, onActionComplete }: { title: string | null; accounts: Account[]; onActionComplete?: () => void }) {
   const paymentCompanies: IPaymentFacilities[] = 
   [
     { id: 1, name: 'Electricity' },
@@ -19,7 +19,7 @@ export default function Payment({ title, accounts }: { title: string | null; acc
   return (
     <div className="payment-form">
       <GeneralForm  paymentComps={paymentCompanies} selectedValue={selectedCompany?.id}
-      onChange={setSelectedCompany} btnTitle={btnTitle} labelDescription={labelDescription} />
+      onChange={setSelectedCompany} btnTitle={btnTitle} labelDescription={labelDescription} onActionComplete={onActionComplete ?? (() => {})} />
     </div>
   );
 }
