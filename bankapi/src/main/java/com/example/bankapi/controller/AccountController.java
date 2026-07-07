@@ -60,34 +60,9 @@ public class AccountController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // TODO 1: Add a POST endpoint that accepts an Account in the request body
-    // and returns 201 Created with the account in the response body.
-    // The endpoint does not need to persist the account -- this is a stub.
-    // Annotate the parameter with @RequestBody.
-    // Use ResponseEntity.status(HttpStatus.CREATED).body(account) as the return value.
-
     @PostMapping
+    @PreAuthorize("hasRole('teller')")
     public ResponseEntity<Account> accounts(Account account){
         return ResponseEntity.status(HttpStatus.CREATED).body(account);
     }
-
-    // TODO 6: Complete this endpoint.
-// @AuthenticationPrincipal instructs Spring Security to inject the validated Jwt
-// from the SecurityContext directly as a method parameter.
-// This is cleaner than calling SecurityContextHolder.getContext() manually.
-    @GetMapping("/me")
-    public Map<String, Object> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        return authenticatedUserService.extractUserDetails(jwt);
-    }
-
-    // TODO 24: Add this endpoint to AccountController.
-// It is protected and requires an authenticated caller.
-// The inbound request uses the caller's token.
-// The outbound call to the downstream service uses the service's own token.
-    @GetMapping("/downstream")
-    public List<Account> getFromDownstream() {
-        // TODO: call downstreamAccountService.fetchAllFromDownstream() and return the result
-        return downstreamAccountService.fetchAllFromDownstream();
-    }
-
 }

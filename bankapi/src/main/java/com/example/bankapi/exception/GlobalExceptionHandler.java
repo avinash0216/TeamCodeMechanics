@@ -10,24 +10,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.List;
 import java.util.stream.Collectors;
 
-// @RestControllerAdvice = @ControllerAdvice + @ResponseBody.
-// Every method in this class can return a plain object and Spring will
-// serialize it to JSON, just like @RestController does for normal endpoints.
-// This class applies to all controllers in the application by default.
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    // Handles ResourceNotFoundException (and its subclasses like
-    // AccountNotFoundException) -- returns 404
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex) {
-        // TODO 11: Build an ApiError with:
-        //   status = "404 NOT_FOUND"
-        //   errorCode = ex.getResourceType().toUpperCase() + "_NOT_FOUND"
-        //              (e.g. "ACCOUNT_NOT_FOUND" for an AccountNotFoundException)
-        //   message = ex.getMessage()
-        //   fieldErrors = null
-        // Return ResponseEntity with status HttpStatus.NOT_FOUND and the ApiError as the body.
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(
                 "404 NOT_FOUND",
                 ex.getResourceType().toUpperCase() + "_NOT_FOUND",
@@ -39,12 +25,6 @@ public class GlobalExceptionHandler {
     // Handles BusinessRuleException -- returns 422
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleException ex) {
-        // TODO 12: Build an ApiError with:
-        //   status = "422 UNPROCESSABLE_ENTITY"
-        //   errorCode = ex.getErrorCode()      (e.g. "INSUFFICIENT_FUNDS", "ACCOUNT_NOT_OPEN")
-        //   message = ex.getMessage()
-        //   fieldErrors = null
-        // Return ResponseEntity with status HttpStatus.UNPROCESSABLE_ENTITY.
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new ApiError(
                 "422 UNPROCESSABLE_ENTITY",
                 ex.getErrorCode(),
@@ -86,19 +66,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    // Catch-all for any unhandled exception -- returns 500
-    // Security note: the response body intentionally contains no stack trace,
-    // no exception class name, and no internal message.
-    // Those details are available in the server logs, not in the HTTP response.
+    // Handles DuplicateIdempotencyKeyException -- returns 409
+    @ExceptionHandler(DuplicateIdempotencyKeyException.class)
+    public ResponseEntity<ApiError> handleDuplicateIdempotencyKey(DuplicateIdempotencyKeyException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(
+                "409 CONFLICT",
+                "DUPLICATE_IDEMPOTENCY_KEY",
+                ex.getMessage(),
+                null
+        ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
-        // TODO 13: Build an ApiError with:
-        //   status = "500 INTERNAL_SERVER_ERROR"
-        //   errorCode = "INTERNAL_ERROR"
-        //   message = "An unexpected error occurred. Please contact support."
-        //   fieldErrors = null
-        // Log the real exception (System.err is fine for now -- a real app uses SLF4J).
-        // Return ResponseEntity with status HttpStatus.INTERNAL_SERVER_ERROR.
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(
                 "500 INTERNAL_SERVER_ERROR",
                 "INTERNAL_ERROR",
