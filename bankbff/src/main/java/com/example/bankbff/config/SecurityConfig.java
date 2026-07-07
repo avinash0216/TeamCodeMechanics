@@ -29,7 +29,7 @@ public class SecurityConfig {
                                                   WebClient.Builder webClientBuilder) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/oauth2/**", "/login/**", "/logged-out").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/**", "/logged-out","api/health/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated())
 

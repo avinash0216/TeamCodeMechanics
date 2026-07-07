@@ -1,0 +1,530 @@
+### Business Rules scenario checks (BFF)
+### Base data
+### Accounts:
+### 128-9878-001 (cust 1, ACTIVE, 2000.00)
+### 128-9878-002 (cust 1, ACTIVE, 11000.00)
+### 128-9878-003 (cust 1, INACTIVE, 0.00)
+### 128-9878-004 (cust 2, ACTIVE, 3000.00)
+###
+### Customers:
+### 1 -> 487-978493
+### 2 -> 500-100200
+### 21 -> 442-100650
+### 22 -> 980-104100
+###
+### Login identities:
+### - account holder (cust 1): 487-978493 / password
+### - account holder (cust 2): 500-100200 / password
+### - teller: teller1 / password
+###
+### Set cookies after logging in through browser:
+###   http://localhost:8080/oauth2/authorization/bank-auth
+
+@bff = http://localhost:8080
+@aliceCookie = BFF_SESSION=PASTE_ALICE_SESSION
+@bobCookie = BFF_SESSION=PASTE_BOB_SESSION
+@tellerCookie = BFF_SESSION=446173D19CDA65DCCD3AC7DF643A6ADB
+
+################################################################################
+### BR-A1: Every endpoint except GET /api/health requires valid authentication.
+################################################################################
+
+### A1.1 Health is public -> 200
+GET {{bff}}/api/health
+Accept: application/json
+
+### A1.2 Accounts without auth -> 401
+GET {{bff}}/api/accounts
+Accept: application/json
+
+### A1.3 Transfer without auth -> 401
+POST {{bff}}/api/transfers
+Accept: application/json
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 10.00
+}
+
+################################################################################
+### BR-A2: Deposits and withdrawals require teller role.
+################################################################################
+
+### A2.1 Deposit as account_holder -> 403
+POST {{bff}}/api/deposits
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 10.00
+}
+
+### A2.2 Withdrawal as account_holder -> 403
+POST {{bff}}/api/withdrawals
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-002",
+  "amount": 10.00
+}
+
+### A2.3 Deposit as teller -> success (200 from BFF wrapper)
+POST {{bff}}/api/deposits
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 10.00
+}
+
+################################################################################
+### BR-A3: Account status changes and transaction report require teller role.
+################################################################################
+
+### NOTE:
+### These endpoints are not exposed in the current BFF controller set.
+### If you add status/report endpoints later, use aliceCookie (expect 403)
+### and tellerCookie (expect success) for role checks.
+
+################################################################################
+### BR-A4: account_holder may act only on own customer accounts.
+################################################################################
+
+### A4.1 Alice reading accounts -> should include only customer 1 accounts (001,002,003)
+GET {{bff}}/api/accounts
+Accept: application/json
+Cookie: {{aliceCookie}}
+
+### A4.2 Alice transferring to Bob account -> 403
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-004",
+  "amount": 10.00
+}
+
+### A4.3 Alice payment on Bob account -> 403
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+Idempotency-Key: br-a4-unauthorized-payment-001
+
+{
+  "accountNumber": "128-9878-004",
+  "amount": 25.00,
+  "payee": "Utility Company"
+}
+
+################################################################################
+### BR-A5: Teller transfer must stay within one customer (no cross-customer).
+################################################################################
+
+### A5.1 Teller cross-customer transfer (cust1 -> cust2) -> 403
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-004",
+  "amount": 20.00
+}
+
+### A5.2 Teller same-customer transfer (cust1 -> cust1) -> success
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 20.00
+}
+
+################################################################################
+### BR-A6: Referenced account/customer that does not exist returns 404.
+################################################################################
+
+### A6.1 Non-existent source account on transfer -> 404
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-999",
+  "toAccountNumber": "128-9878-002",
+  "amount": 10.00
+}
+
+### A6.2 Non-existent destination account on transfer -> 404
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-998",
+  "amount": 10.00
+}
+
+### A6.3 Non-existent account on payment -> 404
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+Idempotency-Key: br-a6-missing-account-payment-001
+
+{
+  "accountNumber": "128-9878-999",
+  "amount": 10.00,
+  "payee": "Utility Company"
+}
+
+################################################################################
+### BR-S1: No money movement on INACTIVE account. Return 422.
+################################################################################
+
+### S1.1 Deposit to inactive account -> 422
+POST {{bff}}/api/deposits
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-003",
+  "amount": 10.00
+}
+
+### S1.2 Withdrawal from inactive account -> 422
+POST {{bff}}/api/withdrawals
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-003",
+  "amount": 10.00
+}
+
+### S1.3 Transfer from inactive account -> 422
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-003",
+  "toAccountNumber": "128-9878-002",
+  "amount": 10.00
+}
+
+### S1.4 Transfer to inactive account -> 422
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-003",
+  "amount": 10.00
+}
+
+### S1.5 Payment from inactive account -> 422
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+Idempotency-Key: br-s1-inactive-payment-001
+
+{
+  "accountNumber": "128-9878-003",
+  "amount": 10.00,
+  "payee": "Utility Company"
+}
+
+################################################################################
+### BR-S2: INACTIVE account is visible in account reads.
+################################################################################
+
+### S2.1 Alice account list should still include 128-9878-003 with INACTIVE status.
+GET {{bff}}/api/accounts
+Accept: application/json
+Cookie: {{aliceCookie}}
+
+################################################################################
+### BR-V1: amount must be present, numeric, > 0, max two decimals -> 400
+################################################################################
+
+### V1.1 Deposit with missing amount -> 400
+POST {{bff}}/api/deposits
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001"
+}
+
+### V1.2 Deposit with zero amount -> 400
+POST {{bff}}/api/deposits
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 0
+}
+
+### V1.3 Withdrawal with negative amount -> 400
+POST {{bff}}/api/withdrawals
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": -1.00
+}
+
+### V1.4 Transfer with more than 2 decimal places -> 400
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 10.123
+}
+
+################################################################################
+### BR-V2: transfer requires destination account and it must differ -> 400
+################################################################################
+
+### V2.1 Transfer missing destination account -> 400
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "amount": 10.00
+}
+
+### V2.2 Transfer where source == destination -> 400
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-001",
+  "amount": 10.00
+}
+
+################################################################################
+### BR-V3: payment must include non-empty reference -> 400
+################################################################################
+
+### NOTE:
+### Current API model uses "payee" as the required payment reference field.
+
+### V3.1 Payment with missing payee/reference -> 400
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+Idempotency-Key: br-v3-missing-reference-001
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 10.00
+}
+
+### V3.2 Payment with blank payee/reference -> 400
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+Idempotency-Key: br-v3-blank-reference-001
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 10.00,
+  "payee": "   "
+}
+
+################################################################################
+### BR-V4: malformed JSON or unknown required fields -> 400
+################################################################################
+
+### V4.1 Malformed JSON body on transfer -> 400
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 10.00,
+}
+
+### V4.2 Wrong/unknown required field name for destination account -> 400
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountId": "128-9878-002",
+  "amount": 10.00
+}
+
+################################################################################
+### BR-F1/BR-F2: insufficient funds and no negative balances (no overdraft)
+################################################################################
+
+### F1.1 Withdrawal with insufficient funds -> 422
+### Expected: FAILED withdrawal transaction, no balance change.
+POST {{bff}}/api/withdrawals
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 999999.00
+}
+
+### F1.2 Transfer debit leg with insufficient funds -> 422
+### Expected: FAILED TRANSFER_OUT only, no TRANSFER_IN, no transfers row.
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 999999.00
+}
+
+### F1.3 Payment with insufficient funds -> 422
+### Expected: FAILED PAYMENT transaction, no balance change.
+POST {{bff}}/api/payments
+Accept: application/json
+Cookie: {{aliceCookie}}
+Content-Type: application/json
+Idempotency-Key: br-f1-insufficient-funds-payment-001
+
+{
+  "accountNumber": "128-9878-001",
+  "amount": 999999.00,
+  "payee": "Utility Company"
+}
+
+### F2.1 Verify balances never go below zero after failed debits
+GET {{bff}}/api/accounts
+Accept: application/json
+Cookie: {{aliceCookie}}
+
+################################################################################
+### BR-T1/BR-T2/BR-T3: transfer atomicity and outcome behavior
+################################################################################
+
+### T1.1 Baseline balances before successful transfer
+GET {{bff}}/api/accounts
+Accept: application/json
+Cookie: {{tellerCookie}}
+
+### T1.2 Successful same-customer transfer -> success
+### Expected: both legs COMPLETED, one transfers row, atomic commit.
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 15.00
+}
+
+### T1.3 Balances after successful transfer
+### Expected: source decreased by 15.00 and destination increased by 15.00.
+GET {{bff}}/api/accounts
+Accept: application/json
+Cookie: {{tellerCookie}}
+
+### T2.1 Transfer same source and destination -> 400 (BR-V2)
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-002",
+  "toAccountNumber": "128-9878-002",
+  "amount": 15.00
+}
+
+### T2.2 Transfer with inactive source account -> 422
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-003",
+  "toAccountNumber": "128-9878-002",
+  "amount": 15.00
+}
+
+### T2.3 Transfer with inactive destination account -> 422
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-002",
+  "toAccountNumber": "128-9878-003",
+  "amount": 15.00
+}
+
+### T3.1 Insufficient funds transfer -> 422
+### Expected: one FAILED TRANSFER_OUT, no transfers row, no credit leg.
+POST {{bff}}/api/transfers
+Accept: application/json
+Cookie: {{tellerCookie}}
+Content-Type: application/json
+
+{
+  "fromAccountNumber": "128-9878-001",
+  "toAccountNumber": "128-9878-002",
+  "amount": 500000.00
+}

@@ -131,9 +131,6 @@ public class AuthorizationServerConfig {
         Map<String, BankUser> users = Stream.of(alice, bob, chris, doug, teller1)
                 .collect(Collectors.toMap(BankUser::getUsername, u -> u));
 
-        // Return the BankUser unchanged. Do NOT use InMemoryUserDetailsManager:
-        // it wraps and rebuilds a plain User on lookup, the BankUser subtype is
-        // lost, and the token customizer's instanceof check would always be false.
         return username -> {
             BankUser user = users.get(username);
             if (user == null) {
@@ -143,9 +140,6 @@ public class AuthorizationServerConfig {
         };
     }
 
-    // ===== The single registered client: the BFF =====
-    // Carried forward from Labs 4.6 to 4.8. The SPA is no longer a direct client;
-    // it talks to the BFF, and the BFF is the confidential OAuth client.
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
 

@@ -4,7 +4,6 @@ import com.example.bankapi.model.Account;
 import com.example.bankapi.service.AccountService;
 import com.example.bankapi.service.AuthenticatedUserService;
 import com.example.bankapi.service.AuditService;
-import com.example.bankapi.service.DownstreamAccountService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,9 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
@@ -22,15 +18,12 @@ public class AccountController {
 
     private final AccountService accountService;
     private final AuditService auditService;
-    private final DownstreamAccountService downstreamAccountService;
     private final AuthenticatedUserService authenticatedUserService;
 
     public AccountController (AuditService auditService,
-                              DownstreamAccountService downstreamAccountService,
                               AccountService accountService,
                               AuthenticatedUserService authenticatedUserService){
         this.auditService = auditService;
-        this.downstreamAccountService = downstreamAccountService;
         this.accountService = accountService;
         this.authenticatedUserService = authenticatedUserService;
     }
