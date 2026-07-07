@@ -2,6 +2,7 @@ package com.example.bankapi.service;
 
 import com.example.bankapi.exception.MalformedRequestException;
 import com.example.bankapi.model.PaymentRequest;
+import com.example.bankapi.model.WithdrawalRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,9 +22,12 @@ public class PaymentService {
 
     private static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
+    private final TransactionService transactionService;
     private final WebClient paymentMockWebClient;
 
-    public PaymentService(@Qualifier("paymentMockWebClient") WebClient paymentMockWebClient) {
+    public PaymentService(TransactionService transactionService,
+                          @Qualifier("paymentMockWebClient") WebClient paymentMockWebClient) {
+        this.transactionService = transactionService;
         this.paymentMockWebClient = paymentMockWebClient;
     }
 
@@ -32,6 +36,7 @@ public class PaymentService {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new MalformedRequestException("MISSING_FIELD", IDEMPOTENCY_KEY_HEADER, "Idempotency-Key header is required");
         }
+        transactionService.withdrawFromAccount(new WithdrawalRequest(request.accountNumber(), request.amount()));
         return paymentMockWebClient.post()
                 .uri("/payments")
                 .header(IDEMPOTENCY_KEY_HEADER, idempotencyKey)

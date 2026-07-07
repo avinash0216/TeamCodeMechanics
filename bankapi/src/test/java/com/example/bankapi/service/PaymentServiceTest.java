@@ -1,6 +1,7 @@
 package com.example.bankapi.service;
 
 import com.example.bankapi.model.PaymentRequest;
+import com.example.bankapi.model.WithdrawalResponse;
 import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class PaymentServiceTest {
 
@@ -32,7 +37,13 @@ class PaymentServiceTest {
                     .build());
         };
 
+        TransactionService transactionService = mock(TransactionService.class);
+        when(transactionService.withdrawFromAccount(any())).thenReturn(
+                new WithdrawalResponse("txn-1", "ACC-1", new BigDecimal("50.00"), java.time.Instant.now(), "COMPLETED")
+        );
+
         PaymentService service = new PaymentService(
+                transactionService,
                 WebClient.builder()
                         .exchangeFunction(exchangeFunction)
                         .build()
@@ -46,6 +57,7 @@ class PaymentServiceTest {
         assertThat(requests).hasSize(1);
         assertThat(requests.get(0).url().getPath()).isEqualTo("/payments");
         assertThat(requests.get(0).headers().getFirst("Idempotency-Key")).isEqualTo("idem-1001");
+        verify(transactionService).withdrawFromAccount(any());
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("status").asText()).isEqualTo("ACCEPTED");
@@ -59,7 +71,13 @@ class PaymentServiceTest {
                 .body("{\"status\":\"UNAVAILABLE\"}")
                 .build());
 
+        TransactionService transactionService = mock(TransactionService.class);
+        when(transactionService.withdrawFromAccount(any())).thenReturn(
+                new WithdrawalResponse("txn-2", "ACC-1", new BigDecimal("999.99"), java.time.Instant.now(), "COMPLETED")
+        );
+
         PaymentService service = new PaymentService(
+                transactionService,
                 WebClient.builder()
                         .exchangeFunction(exchangeFunction)
                         .build()

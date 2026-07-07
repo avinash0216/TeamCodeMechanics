@@ -121,7 +121,7 @@ public class AuthorizationServerConfig {
                 "account_holder", "Chris Malik", ACCOUNT_HOLDER_SCOPES);
 
         BankUser doug = new BankUser(
-                "980-104100", "104100-104100", encoder.encode("password"),
+                "980-104100", "980-104100", encoder.encode("password"),
                 "account_holder", "Doug Frenzel", ACCOUNT_HOLDER_SCOPES);
 
         BankUser teller1 = new BankUser(

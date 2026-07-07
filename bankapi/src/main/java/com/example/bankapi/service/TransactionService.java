@@ -173,6 +173,7 @@ public class TransactionService {
                 .orElseThrow(() -> new AccountNotFoundException(accountNumber));
 
         validateOwnership(account, isCurrentUserTeller());
+        validateAccountActive(account);
 
         account.setBalance(account.getBalance().add(request.amount()));
         accountRepository.save(account);
@@ -196,6 +197,7 @@ public class TransactionService {
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new AccountNotFoundException(accountNumber));
 
+        validateAccountActive(account);
         validateOwnership(account, isCurrentUserTeller());
 
         if (account.getBalance().compareTo(request.amount()) < 0) {
