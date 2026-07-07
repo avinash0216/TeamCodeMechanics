@@ -1,7 +1,10 @@
 package com.example.bankapi.service;
 
+import com.example.bankapi.entity.IdempotencyKey;
+import com.example.bankapi.exception.DuplicateIdempotencyKeyException;
 import com.example.bankapi.model.PaymentRequest;
 import com.example.bankapi.model.WithdrawalResponse;
+import com.example.bankapi.repository.IdempotencyKeyRepository;
 import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpHeaders;
@@ -19,12 +22,71 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PaymentServiceTest {
+
+    @Test
+    void submitPayment_ThrowsDuplicateIdempotencyKeyException() {
+        TransactionService transactionService = mock(TransactionService.class);
+        IdempotencyKeyRepository idempotencyKeyRepository = mock(IdempotencyKeyRepository.class);
+        when(idempotencyKeyRepository.existsById("duplicate-key-001")).thenReturn(true);
+
+        PaymentService service = new PaymentService(
+                transactionService,
+                idempotencyKeyRepository,
+                WebClient.builder().build()
+        );
+
+        assertThatThrownBy(() -> service.submitPayment(
+                new PaymentRequest("ACC-1", new BigDecimal("50.00"), "Utility"),
+                "duplicate-key-001"
+        ))
+        .isInstanceOf(DuplicateIdempotencyKeyException.class)
+        .hasMessageContaining("Idempotency key already used");
+    }
+
+    @Test
+    void submitPayment_ThrowsMalformedRequestException_MissingIdempotencyKey() {
+        TransactionService transactionService = mock(TransactionService.class);
+        IdempotencyKeyRepository idempotencyKeyRepository = mock(IdempotencyKeyRepository.class);
+
+        PaymentService service = new PaymentService(
+                transactionService,
+                idempotencyKeyRepository,
+                WebClient.builder().build()
+        );
+
+        assertThatThrownBy(() -> service.submitPayment(
+                new PaymentRequest("ACC-1", new BigDecimal("50.00"), "Utility"),
+                null
+        ))
+        .isInstanceOf(com.example.bankapi.exception.MalformedRequestException.class)
+        .hasMessageContaining("Idempotency-Key header is required");
+    }
+
+    @Test
+    void submitPayment_ThrowsMalformedRequestException_BlankIdempotencyKey() {
+        TransactionService transactionService = mock(TransactionService.class);
+        IdempotencyKeyRepository idempotencyKeyRepository = mock(IdempotencyKeyRepository.class);
+
+        PaymentService service = new PaymentService(
+                transactionService,
+                idempotencyKeyRepository,
+                WebClient.builder().build()
+        );
+
+        assertThatThrownBy(() -> service.submitPayment(
+                new PaymentRequest("ACC-1", new BigDecimal("50.00"), "Utility"),
+                "   "
+        ))
+        .isInstanceOf(com.example.bankapi.exception.MalformedRequestException.class)
+        .hasMessageContaining("Idempotency-Key header is required");
+    }
 
     @Test
     void submitPayment_MapsSuccessfulMockResponse() {
@@ -42,8 +104,12 @@ class PaymentServiceTest {
                 new WithdrawalResponse("txn-1", "ACC-1", new BigDecimal("50.00"), java.time.Instant.now(), "COMPLETED")
         );
 
+        IdempotencyKeyRepository idempotencyKeyRepository = mock(IdempotencyKeyRepository.class);
+        when(idempotencyKeyRepository.existsById("idem-1001")).thenReturn(false);
+
         PaymentService service = new PaymentService(
                 transactionService,
+                idempotencyKeyRepository,
                 WebClient.builder()
                         .exchangeFunction(exchangeFunction)
                         .build()
@@ -58,6 +124,7 @@ class PaymentServiceTest {
         assertThat(requests.get(0).url().getPath()).isEqualTo("/payments");
         assertThat(requests.get(0).headers().getFirst("Idempotency-Key")).isEqualTo("idem-1001");
         verify(transactionService).withdrawFromAccount(any());
+        verify(idempotencyKeyRepository).save(any(IdempotencyKey.class));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("status").asText()).isEqualTo("ACCEPTED");
@@ -76,8 +143,12 @@ class PaymentServiceTest {
                 new WithdrawalResponse("txn-2", "ACC-1", new BigDecimal("999.99"), java.time.Instant.now(), "COMPLETED")
         );
 
+        IdempotencyKeyRepository idempotencyKeyRepository = mock(IdempotencyKeyRepository.class);
+        when(idempotencyKeyRepository.existsById("idem-1002")).thenReturn(false);
+
         PaymentService service = new PaymentService(
                 transactionService,
+                idempotencyKeyRepository,
                 WebClient.builder()
                         .exchangeFunction(exchangeFunction)
                         .build()
