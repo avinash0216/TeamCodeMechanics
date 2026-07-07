@@ -389,7 +389,7 @@ Content-Type: application/json
 {
   "fromAccountNumber": "128-9878-001",
   "toAccountNumber": "128-9878-002",
-  "amount": 10.00,
+  "amount": 10.00
 }
 
 ### V4.2 Wrong/unknown required field name for destination account -> 400
